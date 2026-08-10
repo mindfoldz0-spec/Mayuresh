@@ -57,6 +57,8 @@ export const AppIcon: React.FC<AppIconProps> = ({
   className = '',
   alt = 'Icon',
 }) => {
+  const [imageError, setImageError] = useState(false);
+
   const imageSrc =
     (id && REAL_ICONS_MAP[id]) ||
     (iconName && REAL_ICONS_MAP[iconName]);
