@@ -1,28 +1,70 @@
 'use client';
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { Window } from './Window';
 import { useWindowStore } from '../../store/useWindowStore';
-import { AboutApp } from '../apps/AboutApp';
-import { ProjectsApp } from '../apps/ProjectsApp';
-import { SkillsApp } from '../apps/SkillsApp';
-import { ExperienceApp } from '../apps/ExperienceApp';
-import { ContactApp } from '../apps/ContactApp';
-import { FileExplorerApp } from '../apps/FileExplorerApp';
-import { NotepadApp } from '../apps/NotepadApp';
-import { CalculatorApp } from '../apps/CalculatorApp';
-import { SettingsApp } from '../apps/SettingsApp';
-import { TerminalApp } from '../apps/TerminalApp';
-import { BrowserApp } from '../apps/BrowserApp';
-import { PhotosApp } from '../apps/PhotosApp';
-import { RecycleBinApp } from '../apps/RecycleBinApp';
-import { GamesApp } from '../apps/GamesApp';
-import { CalendarApp } from '../apps/CalendarApp';
-import { LinkedInApp } from '../apps/LinkedInApp';
 import { AppId } from '../../types';
+
+// App Loader Spinner Fallback
+const AppLoadingFallback = () => (
+  <div className="w-full h-full flex items-center justify-center bg-slate-950 text-cyan-400">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
+      <span className="text-xs font-mono text-slate-400">Loading Application...</span>
+    </div>
+  </div>
+);
+
+// Dynamic Code-Splitting for Ultra Fast Initial Boot
+const AboutApp = dynamic(() => import('../apps/AboutApp').then((mod) => mod.AboutApp), {
+  loading: () => <AppLoadingFallback />,
+});
+const ProjectsApp = dynamic(() => import('../apps/ProjectsApp').then((mod) => mod.ProjectsApp), {
+  loading: () => <AppLoadingFallback />,
+});
+const SkillsApp = dynamic(() => import('../apps/SkillsApp').then((mod) => mod.SkillsApp), {
+  loading: () => <AppLoadingFallback />,
+});
+const ExperienceApp = dynamic(() => import('../apps/ExperienceApp').then((mod) => mod.ExperienceApp), {
+  loading: () => <AppLoadingFallback />,
+});
+const ContactApp = dynamic(() => import('../apps/ContactApp').then((mod) => mod.ContactApp), {
+  loading: () => <AppLoadingFallback />,
+});
+const FileExplorerApp = dynamic(
+  () => import('../apps/FileExplorerApp').then((mod) => mod.FileExplorerApp),
+  { loading: () => <AppLoadingFallback /> }
+);
+const NotepadApp = dynamic(() => import('../apps/NotepadApp').then((mod) => mod.NotepadApp), {
+  loading: () => <AppLoadingFallback />,
+});
+const CalendarApp = dynamic(() => import('../apps/CalendarApp').then((mod) => mod.CalendarApp), {
+  loading: () => <AppLoadingFallback />,
+});
+const SettingsApp = dynamic(() => import('../apps/SettingsApp').then((mod) => mod.SettingsApp), {
+  loading: () => <AppLoadingFallback />,
+});
+const TerminalApp = dynamic(() => import('../apps/TerminalApp').then((mod) => mod.TerminalApp), {
+  loading: () => <AppLoadingFallback />,
+});
+const BrowserApp = dynamic(() => import('../apps/BrowserApp').then((mod) => mod.BrowserApp), {
+  loading: () => <AppLoadingFallback />,
+});
+const PhotosApp = dynamic(() => import('../apps/PhotosApp').then((mod) => mod.PhotosApp), {
+  loading: () => <AppLoadingFallback />,
+});
+const GamesApp = dynamic(() => import('../apps/GamesApp').then((mod) => mod.GamesApp), {
+  loading: () => <AppLoadingFallback />,
+});
+const LinkedInApp = dynamic(() => import('../apps/LinkedInApp').then((mod) => mod.LinkedInApp), {
+  loading: () => <AppLoadingFallback />,
+});
 
 export const WindowManager: React.FC = () => {
   const { windows } = useWindowStore();
+
+  const openWindows = Object.values(windows).filter((w) => w.isOpen);
 
   const renderAppComponent = (id: AppId) => {
     switch (id) {
@@ -33,12 +75,11 @@ export const WindowManager: React.FC = () => {
       case 'contact': return <ContactApp />;
       case 'explorer': return <FileExplorerApp />;
       case 'notepad': return <NotepadApp />;
-      case 'calculator': return <CalendarApp />;   // Calendar icon → Calendar app
+      case 'calculator': return <CalendarApp />;
       case 'settings': return <SettingsApp />;
       case 'terminal': return <TerminalApp />;
       case 'browser': return <BrowserApp />;
       case 'photos': return <PhotosApp />;
-      case 'recycle-bin': return <RecycleBinApp />;
       case 'games': return <GamesApp />;
       case 'linkedin': return <LinkedInApp />;
       default: return null;
@@ -47,7 +88,7 @@ export const WindowManager: React.FC = () => {
 
   return (
     <>
-      {Object.values(windows).map((windowState) => (
+      {openWindows.map((windowState) => (
         <Window key={windowState.id} windowState={windowState}>
           {renderAppComponent(windowState.id)}
         </Window>

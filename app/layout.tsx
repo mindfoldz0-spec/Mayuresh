@@ -22,9 +22,18 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
   return (
     <html lang="en" className="dark">
-      <body className="bg-slate-950 text-slate-100 font-sans overflow-hidden antialiased">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preload" href={`${basePath}/icons/windows.png`} as="image" />
+        <link rel="preload" href={`${basePath}/icons/about.png`} as="image" />
+        <link rel="preload" href={`${basePath}/wallpapers/windows11.jpg`} as="image" />
+      </head>
+      <body className="bg-slate-950 text-slate-100 font-sans overflow-hidden antialiased select-none">
         {children}
       </body>
     </html>

@@ -8,6 +8,17 @@
   }
 }
 
+/* GPU Acceleration & Performance Tuning */
+.win-gpu {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+img {
+  content-visibility: auto;
+}
+
 /* Custom Windows-style Scrollbars */
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
