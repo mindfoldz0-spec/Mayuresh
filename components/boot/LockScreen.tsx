@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSystemStore } from '../../store/useSystemStore';
 import { Wallpaper } from '../desktop/Wallpaper';
+import { AppIcon } from '../common/AppIcon';
 import { ArrowRight, Power } from 'lucide-react';
 
 export const LockScreen: React.FC = () => {
@@ -46,6 +47,10 @@ export const LockScreen: React.FC = () => {
     setBootStage('desktop');
   };
 
+  const [avatarError, setAvatarError] = useState(false);
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+  const avatarSrc = `${basePath}/mayuresh.png`;
+
   return (
     <div
       className="fixed inset-0 z-[9999] select-none text-white font-sans overflow-hidden bg-slate-950 flex flex-col items-center justify-between p-6 md:p-12"
@@ -81,14 +86,19 @@ export const LockScreen: React.FC = () => {
             boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)',
           }}
         >
-          {/* Mayuresh Avatar — full cover, no frame line */}
+          {/* Mayuresh Avatar — full cover with basePath support */}
           <div className="relative mb-5">
-            <div className="w-28 h-28 rounded-full overflow-hidden shadow-lg ring-2 ring-white/20">
-              <img
-                src="/mayuresh.png"
-                alt="Mayuresh Avatar"
-                className="w-full h-full object-cover scale-110"
-              />
+            <div className="w-28 h-28 rounded-full overflow-hidden shadow-lg ring-2 ring-white/20 flex items-center justify-center bg-slate-900">
+              {!avatarError ? (
+                <img
+                  src={avatarSrc}
+                  alt="Mayuresh Avatar"
+                  onError={() => setAvatarError(true)}
+                  className="w-full h-full object-cover scale-110"
+                />
+              ) : (
+                <AppIcon id="about" size={64} alt="Mayuresh Avatar" />
+              )}
             </div>
           </div>
 
