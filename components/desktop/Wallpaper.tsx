@@ -7,7 +7,9 @@ export const Wallpaper: React.FC = () => {
   const { wallpaperValue } = useSettingsStore();
 
   const match = wallpaperValue.match(/url\(['"]?([^'"]+)['"]?\)/);
-  const imageUrl = match ? match[1] : null;
+  const rawImageUrl = match ? match[1] : null;
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+  const imageUrl = rawImageUrl ? `${basePath}${rawImageUrl}` : null;
 
   return (
     <div className="absolute inset-0 w-full h-full z-0 overflow-hidden select-none">

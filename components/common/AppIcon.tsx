@@ -57,16 +57,17 @@ export const AppIcon: React.FC<AppIconProps> = ({
   className = '',
   alt = 'Icon',
 }) => {
-  const [imageError, setImageError] = useState(false);
-
   const imageSrc =
     (id && REAL_ICONS_MAP[id]) ||
     (iconName && REAL_ICONS_MAP[iconName]);
 
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+  const fullSrc = imageSrc ? `${basePath}${imageSrc}` : '';
+
   if (imageSrc && !imageError) {
     return (
       <img
-        src={imageSrc}
+        src={fullSrc}
         alt={alt}
         width={size}
         height={size}
