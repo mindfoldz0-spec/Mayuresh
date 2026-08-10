@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -63,6 +63,8 @@ const INITIAL_CUSTOM_EVENTS: any[] = [
 export const CalendarApp: React.FC = () => {
   const { theme } = useSettingsStore();
 
+  const [isMounted, setIsMounted] = useState(false);
+
   // In-memory cache for Nager.Date Indian holidays by year { [year: number]: any[] }
   const holidayCache = useRef<Record<number, any[]>>({});
 
@@ -72,6 +74,10 @@ export const CalendarApp: React.FC = () => {
   const [customEvents, setCustomEvents] = useState<any[]>(INITIAL_CUSTOM_EVENTS);
   const [isLoadingHolidays, setIsLoadingHolidays] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Selected event modal details
   const [selectedEvent, setSelectedEvent] = useState<{
@@ -196,6 +202,17 @@ export const CalendarApp: React.FC = () => {
 
   // Combine Nager.Date Indian holidays + Custom events
   const allCalendarEvents = [...holidays, ...customEvents];
+
+  if (!isMounted) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-slate-950 text-cyan-400">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
+          <span className="text-xs font-mono text-slate-400">Loading Calendar...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

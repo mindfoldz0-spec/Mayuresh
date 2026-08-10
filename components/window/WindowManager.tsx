@@ -16,49 +16,62 @@ const AppLoadingFallback = () => (
   </div>
 );
 
-// Dynamic Code-Splitting for Ultra Fast Initial Boot
+// Dynamic Code-Splitting with client-only execution (ssr: false) for ultra fast boot & crash-free rendering
 const AboutApp = dynamic(() => import('../apps/AboutApp').then((mod) => mod.AboutApp), {
   loading: () => <AppLoadingFallback />,
+  ssr: false,
 });
 const ProjectsApp = dynamic(() => import('../apps/ProjectsApp').then((mod) => mod.ProjectsApp), {
   loading: () => <AppLoadingFallback />,
+  ssr: false,
 });
 const SkillsApp = dynamic(() => import('../apps/SkillsApp').then((mod) => mod.SkillsApp), {
   loading: () => <AppLoadingFallback />,
+  ssr: false,
 });
 const ExperienceApp = dynamic(() => import('../apps/ExperienceApp').then((mod) => mod.ExperienceApp), {
   loading: () => <AppLoadingFallback />,
+  ssr: false,
 });
 const ContactApp = dynamic(() => import('../apps/ContactApp').then((mod) => mod.ContactApp), {
   loading: () => <AppLoadingFallback />,
+  ssr: false,
 });
 const FileExplorerApp = dynamic(
   () => import('../apps/FileExplorerApp').then((mod) => mod.FileExplorerApp),
-  { loading: () => <AppLoadingFallback /> }
+  { loading: () => <AppLoadingFallback />, ssr: false }
 );
 const NotepadApp = dynamic(() => import('../apps/NotepadApp').then((mod) => mod.NotepadApp), {
   loading: () => <AppLoadingFallback />,
+  ssr: false,
 });
 const CalendarApp = dynamic(() => import('../apps/CalendarApp').then((mod) => mod.CalendarApp), {
   loading: () => <AppLoadingFallback />,
+  ssr: false,
 });
 const SettingsApp = dynamic(() => import('../apps/SettingsApp').then((mod) => mod.SettingsApp), {
   loading: () => <AppLoadingFallback />,
+  ssr: false,
 });
 const TerminalApp = dynamic(() => import('../apps/TerminalApp').then((mod) => mod.TerminalApp), {
   loading: () => <AppLoadingFallback />,
+  ssr: false,
 });
 const BrowserApp = dynamic(() => import('../apps/BrowserApp').then((mod) => mod.BrowserApp), {
   loading: () => <AppLoadingFallback />,
+  ssr: false,
 });
 const PhotosApp = dynamic(() => import('../apps/PhotosApp').then((mod) => mod.PhotosApp), {
   loading: () => <AppLoadingFallback />,
+  ssr: false,
 });
 const GamesApp = dynamic(() => import('../apps/GamesApp').then((mod) => mod.GamesApp), {
   loading: () => <AppLoadingFallback />,
+  ssr: false,
 });
 const LinkedInApp = dynamic(() => import('../apps/LinkedInApp').then((mod) => mod.LinkedInApp), {
   loading: () => <AppLoadingFallback />,
+  ssr: false,
 });
 
 export const WindowManager: React.FC = () => {
