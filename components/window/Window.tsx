@@ -4,8 +4,9 @@ import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppId, WindowState } from '../../types';
 import { useWindowStore } from '../../store/useWindowStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { WindowControls } from './WindowControls';
-import * as LucideIcons from 'lucide-react';
+import { AppIcon } from '../common/AppIcon';
 
 interface WindowProps {
   windowState: WindowState;
@@ -16,14 +17,13 @@ export const Window: React.FC<WindowProps> = ({ windowState, children }) => {
   const { id, title, iconName, isOpen, isMinimized, isMaximized, zIndex, position, size } =
     windowState;
   const { focusWindow, maximizeWindow, activeWindowId, updatePosition } = useWindowStore();
+  const { theme } = useSettingsStore();
   const windowRef = useRef<HTMLDivElement>(null);
 
   if (!isOpen || isMinimized) return null;
 
   const isActive = activeWindowId === id;
-
-  const IconComponent =
-    (LucideIcons as unknown as Record<string, React.ElementType>)[iconName] || LucideIcons.AppWindow;
+  const isLight = theme === 'light';
 
   return (
     <AnimatePresence mode="wait">
@@ -50,33 +50,49 @@ export const Window: React.FC<WindowProps> = ({ windowState, children }) => {
           width: isMaximized ? '100vw' : size.width,
           height: isMaximized ? 'calc(100vh - 56px)' : size.height,
         }}
-        className={`fixed flex flex-col font-sans select-none overflow-hidden transition-shadow ${
+        className={`fixed flex flex-col font-sans select-none overflow-hidden transition-shadow duration-300 ${
           isMaximized ? 'rounded-none' : 'rounded-2xl border'
         } ${
-          isActive
-            ? 'bg-slate-900/90 backdrop-blur-2xl border-cyan-500/40 shadow-[0_20px_50px_rgba(0,0,0,0.5)]'
-            : 'bg-slate-900/75 backdrop-blur-md border-white/10 shadow-lg'
+          isLight
+            ? isActive
+              ? 'bg-slate-100/95 backdrop-blur-2xl border-slate-300 shadow-[0_20px_50px_rgba(0,0,0,0.2)] text-slate-900'
+              : 'bg-slate-100/80 backdrop-blur-md border-slate-200 shadow-md text-slate-800'
+            : isActive
+              ? 'bg-slate-900/90 backdrop-blur-2xl border-cyan-500/40 shadow-[0_20px_50px_rgba(0,0,0,0.5)] text-slate-100'
+              : 'bg-slate-900/75 backdrop-blur-md border-white/10 shadow-lg text-slate-200'
         }`}
       >
         {/* Title Bar Drag Handle */}
         <div
           onDoubleClick={() => maximizeWindow(id)}
           className={`h-11 px-4 flex items-center justify-between cursor-move border-b select-none transition-colors ${
-            isActive
-              ? 'bg-gradient-to-r from-slate-900 via-slate-800/80 to-slate-900 border-white/15'
-              : 'bg-slate-950/60 border-white/5'
+            isLight
+              ? isActive
+                ? 'bg-slate-200/90 border-slate-300'
+                : 'bg-slate-100/60 border-slate-200'
+              : isActive
+                ? 'bg-gradient-to-r from-slate-900 via-slate-800/80 to-slate-900 border-white/15'
+                : 'bg-slate-950/60 border-white/5'
           }`}
         >
           {/* Left Title & App Icon */}
           <div className="flex items-center gap-2.5">
             <div
-              className={`p-1.5 rounded-lg flex items-center justify-center ${
-                isActive ? 'bg-cyan-500/20 text-cyan-300' : 'bg-white/5 text-slate-400'
+              className={`p-1 rounded-lg flex items-center justify-center ${
+                isActive
+                  ? isLight
+                    ? 'bg-cyan-500/15 text-cyan-700'
+                    : 'bg-cyan-500/20 text-cyan-300'
+                  : isLight
+                    ? 'bg-slate-300/50 text-slate-600'
+                    : 'bg-white/5 text-slate-400'
               }`}
             >
-              <IconComponent size={16} />
+              <AppIcon id={id} iconName={iconName} size={18} />
             </div>
-            <span className="text-xs font-semibold text-slate-200 tracking-wide">{title}</span>
+            <span className={`text-xs font-semibold tracking-wide ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+              {title}
+            </span>
           </div>
 
           {/* Right Window Control Buttons */}
@@ -84,7 +100,9 @@ export const Window: React.FC<WindowProps> = ({ windowState, children }) => {
         </div>
 
         {/* Window Content Body */}
-        <div className="flex-1 w-full h-[calc(100%-44px)] overflow-auto bg-slate-950/60 text-slate-100 font-sans custom-scrollbar">
+        <div className={`flex-1 w-full h-[calc(100%-44px)] overflow-auto font-sans custom-scrollbar ${
+          isLight ? 'bg-white/90 text-slate-900' : 'bg-slate-950/60 text-slate-100'
+        }`}>
           {children}
         </div>
       </motion.div>

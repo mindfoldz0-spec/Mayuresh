@@ -11,6 +11,7 @@ interface SettingsState {
   translucencyEnabled: boolean;
 
   setWallpaper: (wallpaperId: string) => void;
+  setTheme: (theme: 'dark' | 'light') => void;
   toggleTheme: () => void;
   setAccentColor: (color: string) => void;
   toggleAnimations: () => void;
@@ -20,7 +21,7 @@ interface SettingsState {
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-  wallpaperId: 'wall-bloom',
+  wallpaperId: 'wall-windows11',
   wallpaperValue: WALLPAPERS[0].value,
   theme: 'dark',
   accentColor: '#0078d4',
@@ -35,14 +36,31 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     }
   },
 
+  setTheme: (theme: 'dark' | 'light') => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', theme);
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+      }
+    }
+    set({ theme });
+  },
+
   toggleTheme: () =>
     set((state) => {
       const nextTheme = state.theme === 'dark' ? 'light' : 'dark';
       if (typeof document !== 'undefined') {
+        document.documentElement.setAttribute('data-theme', nextTheme);
         if (nextTheme === 'dark') {
           document.documentElement.classList.add('dark');
+          document.documentElement.classList.remove('light');
         } else {
           document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
         }
       }
       return { theme: nextTheme };
@@ -54,7 +72,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   toggleTranslucency: () => set((state) => ({ translucencyEnabled: !state.translucencyEnabled })),
   resetSettings: () =>
     set({
-      wallpaperId: 'wall-bloom',
+      wallpaperId: 'wall-bliss',
       wallpaperValue: WALLPAPERS[0].value,
       theme: 'dark',
       accentColor: '#0078d4',

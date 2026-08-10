@@ -55,7 +55,14 @@ export const SystemTray: React.FC = () => {
             exit={{ opacity: 0, y: 15, scale: 0.95 }}
             transition={{ duration: 0.15 }}
             onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-14 right-0 w-80 bg-slate-900/90 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl p-4 text-white z-[9990] font-sans"
+            className="absolute bottom-14 right-0 w-80 rounded-2xl shadow-2xl p-4 text-white z-[9990] font-sans"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 100%)',
+              backdropFilter: 'blur(40px) saturate(1.8)',
+              WebkitBackdropFilter: 'blur(40px) saturate(1.8)',
+              border: '1px solid rgba(255,255,255,0.18)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)',
+            }}
           >
             {/* Header */}
             <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-2">
@@ -71,7 +78,7 @@ export const SystemTray: React.FC = () => {
                 className={`p-3 rounded-xl flex items-center gap-3 transition-all text-left ${
                   wifiConnected
                     ? 'bg-cyan-500 text-slate-950 font-medium shadow-md shadow-cyan-500/20'
-                    : 'bg-white/5 border border-white/10 text-slate-400'
+                    : 'bg-white/10 border border-white/15 text-slate-300'
                 }`}
               >
                 {wifiConnected ? <Wifi size={18} /> : <WifiOff size={18} />}
@@ -107,7 +114,7 @@ export const SystemTray: React.FC = () => {
               </button>
 
               {/* Airplane Mode Tile */}
-              <button className="p-3 rounded-xl bg-white/5 border border-white/10 text-slate-400 flex items-center gap-3 transition-all text-left hover:bg-white/10">
+              <button className="p-3 rounded-xl bg-white/10 border border-white/15 text-slate-300 flex items-center gap-3 transition-all text-left hover:bg-white/20">
                 <Plane size={18} />
                 <div>
                   <div className="text-xs font-semibold">Airplane</div>
@@ -117,7 +124,7 @@ export const SystemTray: React.FC = () => {
             </div>
 
             {/* Volume Control Slider */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-3">
+            <div className="bg-white/10 border border-white/15 rounded-xl p-3 mb-3">
               <div className="flex justify-between items-center text-xs text-slate-300 mb-2">
                 <span className="flex items-center gap-2">
                   <button onClick={toggleMute}>

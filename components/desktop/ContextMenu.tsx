@@ -31,22 +31,30 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onClose }) => {
       transition={{ duration: 0.12 }}
       style={{ top: y, left: x }}
       onClick={(e) => e.stopPropagation()}
-      className="fixed z-[9990] w-56 bg-slate-900/85 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl p-1.5 text-slate-100 text-xs select-none font-sans"
+      className={`fixed z-[9990] w-56 backdrop-blur-2xl border rounded-2xl shadow-2xl p-1.5 text-xs select-none font-sans transition-colors duration-200 ${
+        theme === 'light'
+          ? 'bg-white/85 border-slate-300/80 text-slate-800 shadow-xl'
+          : 'bg-slate-900/85 border-white/15 text-slate-100 shadow-2xl'
+      }`}
     >
       <div className="flex flex-col gap-0.5">
         <button
           onClick={() => handleAction(() => window.location.reload())}
-          className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors text-left"
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${
+            theme === 'light' ? 'hover:bg-slate-200/80' : 'hover:bg-white/10'
+          }`}
         >
           <RefreshCw size={14} className="text-cyan-400" />
           <span>Refresh</span>
         </button>
 
-        <div className="h-px bg-white/10 my-1" />
+        <div className={`h-px my-1 ${theme === 'light' ? 'bg-slate-300/80' : 'bg-white/10'}`} />
 
         <button
           onClick={() => handleAction(() => openWindow('about'))}
-          className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors text-left"
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${
+            theme === 'light' ? 'hover:bg-slate-200/80' : 'hover:bg-white/10'
+          }`}
         >
           <Monitor size={14} className="text-blue-400" />
           <span>About Mayuresh</span>
@@ -54,7 +62,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onClose }) => {
 
         <button
           onClick={() => handleAction(() => openWindow('explorer'))}
-          className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors text-left"
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${
+            theme === 'light' ? 'hover:bg-slate-200/80' : 'hover:bg-white/10'
+          }`}
         >
           <FileText size={14} className="text-amber-400" />
           <span>File Explorer</span>
@@ -62,17 +72,21 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onClose }) => {
 
         <button
           onClick={() => handleAction(() => openWindow('terminal'))}
-          className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors text-left"
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${
+            theme === 'light' ? 'hover:bg-slate-200/80' : 'hover:bg-white/10'
+          }`}
         >
           <Terminal size={14} className="text-emerald-400" />
           <span>Open Terminal</span>
         </button>
 
-        <div className="h-px bg-white/10 my-1" />
+        <div className={`h-px my-1 ${theme === 'light' ? 'bg-slate-300/80' : 'bg-white/10'}`} />
 
         <button
           onClick={() => handleAction(() => openWindow('settings'))}
-          className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors text-left"
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${
+            theme === 'light' ? 'hover:bg-slate-200/80' : 'hover:bg-white/10'
+          }`}
         >
           <Settings size={14} className="text-purple-400" />
           <span>Personalize & Wallpaper</span>
@@ -80,17 +94,19 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, onClose }) => {
 
         <button
           onClick={() => handleAction(toggleTheme)}
-          className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors text-left"
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${
+            theme === 'light' ? 'hover:bg-slate-200/80' : 'hover:bg-white/10'
+          }`}
         >
           {theme === 'dark' ? (
-            <Sun size={14} className="text-amber-300" />
+            <Sun size={14} className="text-amber-500" />
           ) : (
-            <Moon size={14} className="text-indigo-400" />
+            <Moon size={14} className="text-indigo-600" />
           )}
-          <span>Toggle {theme === 'dark' ? 'Light' : 'Dark'} Mode</span>
+          <span>Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode</span>
         </button>
 
-        <div className="h-px bg-white/10 my-1" />
+        <div className={`h-px my-1 ${theme === 'light' ? 'bg-slate-300/80' : 'bg-white/10'}`} />
 
         <button
           onClick={() => handleAction(restartBootSequence)}

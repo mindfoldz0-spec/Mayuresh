@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSystemStore } from '../../store/useSystemStore';
-import { Lock, ArrowRight, ShieldCheck, Power, Sparkles, UserCheck } from 'lucide-react';
+import { Wallpaper } from '../desktop/Wallpaper';
+import { ArrowRight, Power } from 'lucide-react';
 
 export const LockScreen: React.FC = () => {
   const { setBootStage } = useSystemStore();
-  const [showLoginPrompt, setShowLoginPrompt] = useState(true); // Default to showing login prompt directly so user is never stuck
   const [currentTime, setCurrentTime] = useState(() => {
     const now = new Date();
     return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -48,81 +48,98 @@ export const LockScreen: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] select-none text-white font-sans overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-blue-950 flex flex-col items-center justify-between p-6 md:p-12"
+      className="fixed inset-0 z-[9999] select-none text-white font-sans overflow-hidden bg-slate-950 flex flex-col items-center justify-between p-6 md:p-12"
     >
-      {/* Ambient Radial Background Glows - Ensures vibrant screen even without external image */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full bg-cyan-600/20 blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-[500px] h-[500px] rounded-full bg-purple-600/20 blur-[130px] pointer-events-none" />
-      <div className="absolute top-10 left-10 w-[450px] h-[450px] rounded-full bg-blue-600/20 blur-[120px] pointer-events-none" />
+      {/* Background Desktop Wallpaper */}
+      <Wallpaper />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-xl pointer-events-none" />
 
       {/* Top Clock Display */}
       <div className="relative z-10 flex flex-col items-center text-center pt-4 md:pt-8">
-        <h1 className="text-5xl md:text-7xl font-extralight tracking-tight text-white drop-shadow-[0_4px_20px_rgba(0,120,212,0.5)]">
+        <h1 className="text-5xl md:text-7xl font-extralight tracking-tight text-white drop-shadow-lg">
           {currentTime}
         </h1>
-        <p className="text-sm md:text-lg font-light text-cyan-200 mt-2 tracking-wide font-mono">
+        <p className="text-sm md:text-lg font-light text-white/70 mt-2 tracking-wide">
           {currentDate}
         </p>
       </div>
 
-      {/* Center Interactive Login Card */}
+      {/* Center Interactive Login Card — Liquid Glass */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
         className="relative z-10 w-full max-w-sm my-auto"
       >
-        <div className="w-full bg-slate-900/80 backdrop-blur-3xl border border-cyan-500/30 rounded-3xl p-8 shadow-[0_20px_60px_rgba(0,0,0,0.7)] flex flex-col items-center text-center">
-          {/* Mayuresh Avatar */}
+        <div
+          className="w-full rounded-3xl p-8 flex flex-col items-center text-center"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 100%)',
+            backdropFilter: 'blur(40px) saturate(1.8)',
+            WebkitBackdropFilter: 'blur(40px) saturate(1.8)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)',
+          }}
+        >
+          {/* Mayuresh Avatar — full cover, no frame line */}
           <div className="relative mb-5">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-cyan-400 via-blue-500 to-indigo-600 p-1 shadow-xl shadow-cyan-500/40">
-              <div className="w-full h-full bg-slate-950 rounded-full flex items-center justify-center text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400 border border-cyan-400/30">
-                M
-              </div>
-            </div>
-            <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-slate-950 flex items-center justify-center text-slate-950 shadow-md">
-              <UserCheck size={12} />
+            <div className="w-28 h-28 rounded-full overflow-hidden shadow-lg ring-2 ring-white/20">
+              <img
+                src="/mayuresh.png"
+                alt="Mayuresh Avatar"
+                className="w-full h-full object-cover scale-110"
+              />
             </div>
           </div>
 
           {/* Name & Role */}
-          <h2 className="text-2xl font-bold text-white tracking-tight mb-1">
+          <h2 className="text-2xl font-semibold text-white tracking-tight mb-1">
             Mayuresh
           </h2>
-          <p className="text-xs text-cyan-300 font-mono mb-6 flex items-center gap-1.5 justify-center">
-            <ShieldCheck size={14} className="text-cyan-400" />
+          <p className="text-xs text-white/50 font-light mb-7 tracking-wide">
             Full Stack Software Engineer
           </p>
 
-          {/* Sign In Action Button */}
+          {/* Sign In Action Button — clean white glass */}
           <button
             onClick={handleSignIn}
-            className="w-full py-3.5 px-6 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 active:scale-[0.98] text-slate-950 font-bold rounded-2xl shadow-xl shadow-cyan-500/30 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+            className="w-full py-3.5 px-6 rounded-2xl font-semibold text-sm transition-all flex items-center justify-center gap-2 group cursor-pointer active:scale-[0.97]"
+            style={{
+              background: 'rgba(255,255,255,0.15)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255,255,255,0.25)',
+              color: 'white',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+            }}
           >
-            <span>Enter Mayuresh Desktop</span>
-            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            <span>Sign In</span>
+            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </button>
 
-          <p className="mt-4 text-[11px] text-slate-400 font-mono">
-            Press <span className="text-cyan-300 font-bold">Enter ↵</span> or click button to sign in
+          <p className="mt-4 text-[11px] text-white/30">
+            Press <span className="text-white/60 font-medium">Enter ↵</span> or click to continue
           </p>
         </div>
       </motion.div>
 
-      {/* Bottom Footer Options */}
-      <div className="relative z-10 w-full flex justify-between items-center text-xs text-slate-400 font-mono">
-        <span className="flex items-center gap-1.5">
-          <Sparkles size={14} className="text-cyan-400" />
-          Mayuresh Portfolio OS
-        </span>
-
+      {/* Bottom Footer — minimal */}
+      <div className="relative z-10 w-full flex justify-end items-center">
         <button
           onClick={() => setBootStage('booting')}
           title="Restart System"
-          className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 transition-all flex items-center gap-2"
+          className="p-2.5 rounded-xl transition-all flex items-center gap-2 text-white/40 hover:text-white/70"
+          style={{
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.1)',
+          }}
         >
-          <Power size={16} className="text-cyan-400" />
-          <span className="hidden sm:inline">Restart Boot</span>
+          <Power size={16} />
         </button>
       </div>
     </div>

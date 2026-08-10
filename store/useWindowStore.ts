@@ -45,6 +45,19 @@ export const useWindowStore = create<WindowStoreState>((set, get) => ({
   maxZIndex: 100,
 
   openWindow: (id: AppId) => {
+    if (id === 'linkedin') {
+      if (typeof window !== 'undefined') {
+        window.open('https://www.linkedin.com/in/mayuresh-samel-aa1a412ba', '_blank', 'noopener,noreferrer');
+      }
+      return;
+    }
+    if (id === 'experience') {
+      if (typeof window !== 'undefined') {
+        window.open('https://github.com/mindfoldz0-spec', '_blank', 'noopener,noreferrer');
+      }
+      return;
+    }
+
     const { windows, maxZIndex } = get();
     const target = windows[id];
     if (!target) return;

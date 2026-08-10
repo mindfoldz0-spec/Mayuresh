@@ -16,6 +16,9 @@ import { TerminalApp } from '../apps/TerminalApp';
 import { BrowserApp } from '../apps/BrowserApp';
 import { PhotosApp } from '../apps/PhotosApp';
 import { RecycleBinApp } from '../apps/RecycleBinApp';
+import { GamesApp } from '../apps/GamesApp';
+import { CalendarApp } from '../apps/CalendarApp';
+import { LinkedInApp } from '../apps/LinkedInApp';
 import { AppId } from '../../types';
 
 export const WindowManager: React.FC = () => {
@@ -30,12 +33,14 @@ export const WindowManager: React.FC = () => {
       case 'contact': return <ContactApp />;
       case 'explorer': return <FileExplorerApp />;
       case 'notepad': return <NotepadApp />;
-      case 'calculator': return <CalculatorApp />;
+      case 'calculator': return <CalendarApp />;   // Calendar icon → Calendar app
       case 'settings': return <SettingsApp />;
       case 'terminal': return <TerminalApp />;
       case 'browser': return <BrowserApp />;
       case 'photos': return <PhotosApp />;
       case 'recycle-bin': return <RecycleBinApp />;
+      case 'games': return <GamesApp />;
+      case 'linkedin': return <LinkedInApp />;
       default: return null;
     }
   };

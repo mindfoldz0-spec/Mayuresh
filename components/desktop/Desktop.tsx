@@ -43,7 +43,7 @@ export const Desktop: React.FC = () => {
       <Wallpaper />
 
       {/* Grid of Desktop Shortcuts */}
-      <div className="absolute top-4 left-4 flex flex-col flex-wrap max-h-[calc(100vh-80px)] gap-2 z-10 p-2">
+      <div className="absolute top-2 left-1 flex flex-col flex-wrap max-h-[calc(100vh-70px)] gap-1 z-10 p-1">
         {desktopApps.map((app) => (
           <DesktopIcon
             key={app.id}

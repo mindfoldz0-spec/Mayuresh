@@ -8,16 +8,21 @@ import { APPS_CONFIG } from '../../data/apps';
 import { PROJECTS, SKILL_CATEGORIES } from '../../data/portfolio';
 import { StartMenuSearch } from './StartMenuSearch';
 import { AppId } from '../../types';
-import * as LucideIcons from 'lucide-react';
-import { Power, RotateCcw, Lock, Moon, ShieldCheck, ExternalLink, Briefcase, Code } from 'lucide-react';
+import { AppIcon } from '../common/AppIcon';
+import { Power, RotateCcw, Lock, ExternalLink, Briefcase, ShieldCheck } from 'lucide-react';
+
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 export const StartMenu: React.FC = () => {
   const { isStartMenuOpen, toggleStartMenu, setBootStage, restartBootSequence } = useSystemStore();
   const { openWindow } = useWindowStore();
+  const { theme } = useSettingsStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [showPowerMenu, setShowPowerMenu] = useState(false);
 
   if (!isStartMenuOpen) return null;
+
+  const isLight = theme === 'light';
 
   const filteredApps = APPS_CONFIG.filter(
     (app) =>
@@ -45,7 +50,11 @@ export const StartMenu: React.FC = () => {
         exit={{ opacity: 0, y: 30, scale: 0.96 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
         onClick={(e) => e.stopPropagation()}
-        className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-slate-900/90 backdrop-blur-3xl border border-white/15 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.6)] p-6 z-[9950] text-white font-sans overflow-hidden select-none"
+        className={`fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-2xl backdrop-blur-3xl rounded-3xl p-6 z-[9950] font-sans overflow-hidden select-none transition-colors duration-300 ${
+          isLight
+            ? 'bg-white/90 border border-slate-300/80 text-slate-900 shadow-[0_25px_60px_rgba(0,0,0,0.18)]'
+            : 'bg-slate-900/90 border border-white/15 text-white shadow-[0_25px_60px_rgba(0,0,0,0.6)]'
+        }`}
       >
         {/* Search Bar */}
         <StartMenuSearch
@@ -63,23 +72,18 @@ export const StartMenu: React.FC = () => {
                 Apps ({filteredApps.length})
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {filteredApps.map((app) => {
-                  const Icon =
-                    (LucideIcons as unknown as Record<string, React.ElementType>)[app.iconName] ||
-                    LucideIcons.AppWindow;
-                  return (
-                    <button
-                      key={app.id}
-                      onClick={() => handleLaunchApp(app.id)}
-                      className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/15 flex items-center gap-3 transition-all text-left"
-                    >
-                      <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-300">
-                        <Icon size={18} />
-                      </div>
-                      <span className="text-xs font-medium text-slate-100">{app.title}</span>
-                    </button>
-                  );
-                })}
+                {filteredApps.map((app) => (
+                  <button
+                    key={app.id}
+                    onClick={() => handleLaunchApp(app.id)}
+                    className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/15 flex items-center gap-3 transition-all text-left"
+                  >
+                    <div className="p-1.5 rounded-xl bg-slate-800/80 border border-white/10">
+                      <AppIcon id={app.id} iconName={app.iconName} size={22} />
+                    </div>
+                    <span className="text-xs font-medium text-slate-100">{app.title}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -124,25 +128,20 @@ export const StartMenu: React.FC = () => {
                 <span className="text-[11px] text-cyan-400">All Apps ({APPS_CONFIG.length})</span>
               </div>
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-                {APPS_CONFIG.map((app) => {
-                  const Icon =
-                    (LucideIcons as unknown as Record<string, React.ElementType>)[app.iconName] ||
-                    LucideIcons.AppWindow;
-                  return (
-                    <button
-                      key={app.id}
-                      onClick={() => handleLaunchApp(app.id)}
-                      className="p-3 rounded-2xl hover:bg-white/10 flex flex-col items-center gap-2 transition-all group"
-                    >
-                      <div className="w-11 h-11 rounded-2xl bg-slate-800 border border-white/10 flex items-center justify-center text-cyan-300 group-hover:scale-105 shadow-md">
-                        <Icon size={22} />
-                      </div>
-                      <span className="text-[11px] font-medium text-slate-200 text-center leading-tight line-clamp-1">
-                        {app.title}
-                      </span>
-                    </button>
-                  );
-                })}
+                {APPS_CONFIG.map((app) => (
+                  <button
+                    key={app.id}
+                    onClick={() => handleLaunchApp(app.id)}
+                    className="p-3 rounded-2xl hover:bg-white/10 flex flex-col items-center gap-2 transition-all group"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-slate-800/60 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform shadow-md">
+                      <AppIcon id={app.id} iconName={app.iconName} size={30} />
+                    </div>
+                    <span className="text-[11px] font-medium text-slate-200 text-center leading-tight line-clamp-1">
+                      {app.title}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -156,8 +155,8 @@ export const StartMenu: React.FC = () => {
                   onClick={() => handleLaunchApp('about')}
                   className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/15 flex items-center gap-3 transition-all text-left"
                 >
-                  <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-300">
-                    <ShieldCheck size={20} />
+                  <div className="p-1 rounded-xl bg-slate-800/80 border border-white/10">
+                    <AppIcon id="about" size={28} />
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-white">About Mayuresh</div>
@@ -169,8 +168,8 @@ export const StartMenu: React.FC = () => {
                   onClick={() => handleLaunchApp('projects')}
                   className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/15 flex items-center gap-3 transition-all text-left"
                 >
-                  <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-300">
-                    <Briefcase size={20} />
+                  <div className="p-1 rounded-xl bg-slate-800/80 border border-white/10">
+                    <AppIcon id="projects" size={28} />
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-white">Featured Projects</div>
@@ -185,10 +184,8 @@ export const StartMenu: React.FC = () => {
         {/* Footer Profile & Power Menu */}
         <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between relative">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 p-0.5 shadow-md">
-              <div className="w-full h-full bg-slate-950 rounded-full flex items-center justify-center font-bold text-sm text-cyan-300">
-                M
-              </div>
+            <div className="w-10 h-10 rounded-full bg-slate-800 border border-cyan-400/40 p-0.5 overflow-hidden shadow-md flex items-center justify-center">
+              <AppIcon id="about" size={32} alt="User Avatar" />
             </div>
             <div>
               <div className="text-sm font-semibold text-white">Mayuresh</div>

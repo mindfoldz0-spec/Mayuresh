@@ -13,7 +13,9 @@ export type AppId =
   | 'terminal'
   | 'browser'
   | 'photos'
-  | 'recycle-bin';
+  | 'recycle-bin'
+  | 'games'
+  | 'linkedin';
 
 export interface AppMetadata {
   id: AppId;

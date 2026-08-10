@@ -28,10 +28,8 @@ export const AboutApp: React.FC = () => {
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6 relative z-10">
           {/* Avatar Graphic */}
           <div className="relative shrink-0">
-            <div className="w-28 h-28 rounded-3xl bg-gradient-to-tr from-cyan-400 via-blue-500 to-indigo-600 p-1 shadow-2xl shadow-cyan-500/30">
-              <div className="w-full h-full bg-slate-950 rounded-[22px] flex items-center justify-center text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-tr from-cyan-300 to-blue-400">
-                M
-              </div>
+            <div className="w-28 h-28 rounded-3xl bg-slate-900 border-2 border-cyan-400/50 p-1 shadow-2xl shadow-cyan-500/30 overflow-hidden flex items-center justify-center">
+              <img src="/mayuresh.png" alt="Mayuresh" className="w-full h-full object-cover rounded-[20px]" />
             </div>
             <div className="absolute -bottom-2 -right-2 p-1.5 rounded-xl bg-emerald-500 border-2 border-slate-950 text-slate-950 shadow-md">
               <CheckCircle2 size={16} />

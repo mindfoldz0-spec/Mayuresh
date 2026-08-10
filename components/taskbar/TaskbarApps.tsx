@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useWindowStore } from '../../store/useWindowStore';
 import { APPS_CONFIG } from '../../data/apps';
 import { AppId } from '../../types';
-import * as LucideIcons from 'lucide-react';
+import { AppIcon } from '../common/AppIcon';
 
 export const TaskbarApps: React.FC = () => {
   const { windows, activeWindowId, toggleWindow } = useWindowStore();
@@ -30,10 +30,6 @@ export const TaskbarApps: React.FC = () => {
         const isOpen = windowState?.isOpen;
         const isActive = activeWindowId === id && isOpen && !windowState?.isMinimized;
 
-        const IconComponent =
-          (LucideIcons as unknown as Record<string, React.ElementType>)[config.iconName] ||
-          LucideIcons.AppWindow;
-
         return (
           <motion.button
             key={id}
@@ -44,7 +40,7 @@ export const TaskbarApps: React.FC = () => {
               toggleWindow(id);
             }}
             title={config.title}
-            className={`relative p-2.5 rounded-xl transition-all flex items-center justify-center group ${
+            className={`relative p-2 rounded-xl transition-all flex items-center justify-center group ${
               isActive
                 ? 'bg-cyan-500/25 backdrop-blur-md border border-cyan-400/40 shadow-md text-cyan-300'
                 : isOpen
@@ -52,7 +48,7 @@ export const TaskbarApps: React.FC = () => {
                 : 'hover:bg-white/10 text-slate-300'
             }`}
           >
-            <IconComponent size={20} />
+            <AppIcon id={config.id} iconName={config.iconName} size={24} />
 
             {/* Active Indicator Dot / Pill */}
             {isOpen && (

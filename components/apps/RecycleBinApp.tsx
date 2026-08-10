@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { AppIcon } from '../common/AppIcon';
 import { Trash2, RefreshCw, FileText, Archive, CheckCircle2 } from 'lucide-react';
 import { useSystemStore } from '../../store/useSystemStore';
 
@@ -26,8 +27,8 @@ export const RecycleBinApp: React.FC = () => {
       {/* Top Toolbar */}
       <div className="border-b border-white/10 pb-4 mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30">
-            <Trash2 size={20} />
+          <div className="p-1.5 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center">
+            <AppIcon id="recycle-bin" size={24} />
           </div>
           <div>
             <h2 className="text-base font-bold text-white">Recycle Bin</h2>

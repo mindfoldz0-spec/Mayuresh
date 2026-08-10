@@ -11,6 +11,7 @@ export const SettingsApp: React.FC = () => {
     wallpaperId,
     setWallpaper,
     theme,
+    setTheme,
     toggleTheme,
     animationsEnabled,
     toggleAnimations,
@@ -57,6 +58,8 @@ export const SettingsApp: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {WALLPAPERS.map((wall) => {
             const isSelected = wallpaperId === wall.id;
+            const match = wall.thumbnail.match(/url\(['"]?([^'"]+)['"]?\)/);
+            const thumbUrl = match ? match[1] : null;
 
             return (
               <button
@@ -67,14 +70,22 @@ export const SettingsApp: React.FC = () => {
                     ? 'border-cyan-400 ring-2 ring-cyan-500/50 scale-105'
                     : 'border-white/10 hover:border-white/30'
                 }`}
-                style={{ background: wall.thumbnail }}
+                style={!thumbUrl ? { background: wall.thumbnail } : undefined}
               >
+                {thumbUrl && (
+                  <img
+                    src={thumbUrl}
+                    alt={wall.name}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
                 {isSelected && (
-                  <div className="absolute top-2 right-2 p-1 rounded-full bg-cyan-500 text-slate-950 shadow-md">
+                  <div className="absolute top-2 right-2 p-1 rounded-full bg-cyan-500 text-slate-950 shadow-md z-10">
                     <Check size={12} />
                   </div>
                 )}
-                <span className="text-[11px] font-semibold text-white drop-shadow-md leading-tight">
+                <span className="text-[11px] font-semibold text-white drop-shadow-md leading-tight relative z-10">
                   {wall.name}
                 </span>
               </button>
@@ -90,22 +101,35 @@ export const SettingsApp: React.FC = () => {
           <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
             System Theme
           </h4>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-300">
-                {theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setTheme('dark')}
+              className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                theme === 'dark'
+                  ? 'border-cyan-400 bg-cyan-500/15 text-white ring-2 ring-cyan-500/40'
+                  : 'border-white/10 bg-slate-950/40 text-slate-400 hover:border-white/20'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Moon size={18} className={theme === 'dark' ? 'text-cyan-400' : 'text-slate-400'} />
+                <span className="text-xs font-semibold">Dark Mode</span>
               </div>
-              <div>
-                <div className="text-xs font-semibold text-white">Color Mode</div>
-                <div className="text-[11px] text-slate-400">Currently {theme} mode</div>
-              </div>
-            </div>
+              {theme === 'dark' && <Check size={14} className="text-cyan-400" />}
+            </button>
 
             <button
-              onClick={toggleTheme}
-              className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-xs transition-all shadow-md"
+              onClick={() => setTheme('light')}
+              className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                theme === 'light'
+                  ? 'border-cyan-400 bg-cyan-500/15 text-white ring-2 ring-cyan-500/40'
+                  : 'border-white/10 bg-slate-950/40 text-slate-400 hover:border-white/20'
+              }`}
             >
-              Switch to {theme === 'dark' ? 'Light' : 'Dark'}
+              <div className="flex items-center gap-2.5">
+                <Sun size={18} className={theme === 'light' ? 'text-amber-400' : 'text-slate-400'} />
+                <span className="text-xs font-semibold">Light Mode</span>
+              </div>
+              {theme === 'light' && <Check size={14} className="text-cyan-400" />}
             </button>
           </div>
         </div>
