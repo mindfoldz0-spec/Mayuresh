@@ -1,197 +1,188 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
 import {
   Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
   Plus,
-  AlertCircle,
-  Sparkles,
   X,
+  Sparkles,
   Flag,
-  Check,
-  RefreshCw,
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
-// Initial Custom Portfolio & Milestone Events
-const INITIAL_CUSTOM_EVENTS: any[] = [
+interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string; // YYYY-MM-DD
+  type: 'holiday' | 'custom';
+  globalName?: string;
+  description?: string;
+  bgColor?: string;
+}
+
+// Indian Gazetted Public Holidays
+const INDIAN_HOLIDAYS_BASE = [
+  { date: '-01-01', localName: "New Year's Day", name: "New Year's Day" },
+  { date: '-01-26', localName: 'Republic Day (Gantantra Diwas)', name: 'Republic Day' },
+  { date: '-03-08', localName: 'Maha Shivratri', name: 'Maha Shivratri' },
+  { date: '-03-25', localName: 'Holi (Festival of Colors)', name: 'Holi' },
+  { date: '-04-14', localName: 'Dr. B.R. Ambedkar Jayanti', name: 'Ambedkar Jayanti' },
+  { date: '-05-01', localName: 'Maharashtra Day / Labour Day', name: 'Maharashtra Day' },
+  { date: '-08-15', localName: 'Independence Day (Swatantrata Diwas)', name: 'Independence Day' },
+  { date: '-09-07', localName: 'Ganesh Chaturthi', name: 'Ganesh Chaturthi' },
+  { date: '-10-02', localName: 'Mahatma Gandhi Jayanti', name: 'Gandhi Jayanti' },
+  { date: '-10-24', localName: 'Dussehra (Vijaya Dashami)', name: 'Dussehra' },
+  { date: '-11-01', localName: 'Deepavali (Diwali)', name: 'Diwali' },
+  { date: '-11-15', localName: 'Guru Nanak Jayanti', name: 'Guru Nanak Jayanti' },
+  { date: '-12-25', localName: 'Christmas Day (Bada Din)', name: 'Christmas' },
+];
+
+// Custom Milestones
+const INITIAL_CUSTOM_EVENTS: CalendarEvent[] = [
   {
     id: 'portfolio-launch',
     title: '🚀 Portfolio Launch',
     start: '2026-08-20',
-    allDay: true,
-    backgroundColor: '#0284c7', // Cyan / Blue for portfolio launch
-    borderColor: '#0369a1',
-    textColor: '#ffffff',
-    extendedProps: {
-      type: 'custom',
-      description: 'Official launch of Mayuresh Samel Windows OS Portfolio website.',
-    },
+    type: 'custom',
+    description: 'Official launch of Mayuresh Samel Windows OS Portfolio website.',
+    bgColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
   },
   {
     id: 'lost-dune-release',
     title: '🎮 Lost Dune Game Release',
     start: '2026-08-15',
-    allDay: true,
-    backgroundColor: '#7c3aed', // Purple for game release
-    borderColor: '#6d28d9',
-    textColor: '#ffffff',
-    extendedProps: {
-      type: 'custom',
-      description: 'Release of 3rd year diploma project Lost Dune web game.',
-    },
+    type: 'custom',
+    description: 'Release of 3rd year diploma project Lost Dune web game by Mayuresh Samel.',
+    bgColor: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
   },
   {
     id: 'diploma-engineering',
     title: '🎓 Diploma Engineering Milestone',
     start: '2026-08-05',
-    allDay: true,
-    backgroundColor: '#059669', // Emerald for education
-    borderColor: '#047857',
-    textColor: '#ffffff',
-    extendedProps: {
-      type: 'custom',
-      description: 'Milestone achievement in Computer Engineering diploma studies.',
-    },
+    type: 'custom',
+    description: 'Milestone achievement in Computer Engineering diploma studies.',
+    bgColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
   },
+];
+
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 export const CalendarApp: React.FC = () => {
   const { theme } = useSettingsStore();
 
   const [isMounted, setIsMounted] = useState(false);
+  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 11)); // Default to Aug 2026
 
-  // In-memory cache for Nager.Date Indian holidays by year { [year: number]: any[] }
-  const holidayCache = useRef<Record<number, any[]>>({});
+  // In-memory cache for Indian holidays by year
+  const holidayCache = useRef<Record<number, CalendarEvent[]>>({});
 
-  // State management
-  const [displayedYear, setDisplayedYear] = useState<number | null>(null);
-  const [holidays, setHolidays] = useState<any[]>([]);
-  const [customEvents, setCustomEvents] = useState<any[]>(INITIAL_CUSTOM_EVENTS);
-  const [isLoadingHolidays, setIsLoadingHolidays] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
+  // State
+  const [holidays, setHolidays] = useState<CalendarEvent[]>([]);
+  const [customEvents, setCustomEvents] = useState<CalendarEvent[]>(INITIAL_CUSTOM_EVENTS);
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // Selected event modal details
-  const [selectedEvent, setSelectedEvent] = useState<{
-    title: string;
-    date: string;
-    type: string;
-    globalName?: string;
-    description?: string;
-  } | null>(null);
-
-  // Add event modal state
+  // Modals
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedDateForAdd, setSelectedDateForAdd] = useState('');
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newEventDesc, setNewEventDesc] = useState('');
 
-  // Fetch Indian Public Holidays from Nager.Date API with year caching
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Fetch Indian Public Holidays with year caching & dataset fallback
   const fetchHolidaysForYear = useCallback(async (year: number) => {
-    // Check in-memory cache first
     if (holidayCache.current[year]) {
       setHolidays(holidayCache.current[year]);
-      setApiError(null);
       return;
     }
 
-    setIsLoadingHolidays(true);
-    setApiError(null);
+    let rawHolidays: any[] = [];
 
     try {
-      // Nager.Date API (Public, No Key Required, IN = India)
-      const res = await fetch(`https://date.nager.at/api/v4/PublicHolidays/${year}/IN`);
-
-      if (!res.ok) {
-        throw new Error(`API responded with status ${res.status}`);
+      const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/IN`);
+      if (res.ok && res.status !== 204) {
+        const text = await res.text();
+        if (text && text.trim().length > 0) {
+          rawHolidays = JSON.parse(text);
+        }
       }
-
-      const data = await res.json();
-
-      // Convert Nager.Date response to FullCalendar event format
-      const formattedHolidays: any[] = data.map((holiday: any) => ({
-        id: `holiday-${holiday.date}-${holiday.name}`,
-        title: `🇮🇳 ${holiday.localName || holiday.name}`,
-        start: holiday.date,
-        allDay: true,
-        backgroundColor: '#dc2626', // Red accent for Indian national holidays
-        borderColor: '#b91c1c',
-        textColor: '#ffffff',
-        extendedProps: {
-          type: 'holiday',
-          globalName: holiday.name,
-          localName: holiday.localName,
-          countryCode: holiday.countryCode,
-        },
-      }));
-
-      // Cache the result for this year
-      holidayCache.current[year] = formattedHolidays;
-      setHolidays(formattedHolidays);
     } catch (err) {
-      console.warn(`Failed to fetch Indian holidays for ${year} from Nager.Date:`, err);
-      setApiError(`Holiday data for ${year} unavailable`);
-    } finally {
-      setIsLoadingHolidays(false);
+      console.log('Using Indian Holidays dataset for year:', year);
     }
+
+    if (!rawHolidays || rawHolidays.length === 0) {
+      rawHolidays = INDIAN_HOLIDAYS_BASE.map((h) => ({
+        date: `${year}${h.date}`,
+        localName: h.localName,
+        name: h.name,
+      }));
+    }
+
+    const formattedHolidays: CalendarEvent[] = rawHolidays.map((holiday: any) => ({
+      id: `holiday-${holiday.date}-${holiday.name}`,
+      title: `🇮🇳 ${holiday.localName || holiday.name}`,
+      start: holiday.date,
+      type: 'holiday',
+      globalName: holiday.name,
+      description: `Official Indian Public Holiday (${holiday.localName || holiday.name})`,
+      bgColor: 'bg-red-500/20 text-red-300 border-red-500/40',
+    }));
+
+    holidayCache.current[year] = formattedHolidays;
+    setHolidays(formattedHolidays);
   }, []);
 
-  // Handle FullCalendar dates set (triggered on view & year changes)
-  const handleDatesSet = (dateInfo: any) => {
-    // Determine displayed year from mid-date of the view
-    const currentYear = dateInfo.view.currentStart.getFullYear();
+  useEffect(() => {
+    fetchHolidaysForYear(currentYear);
+  }, [currentYear, fetchHolidaysForYear]);
 
-    if (currentYear !== displayedYear) {
-      setDisplayedYear(currentYear);
-      fetchHolidaysForYear(currentYear);
-    }
+  const allEvents = [...holidays, ...customEvents];
+
+  const getEventsForDate = (dateStr: string) => {
+    return allEvents.filter((ev) => ev.start === dateStr);
   };
 
-  // Handle click on event
-  const handleEventClick = (clickInfo: any) => {
-    const ev = clickInfo.event;
-    const type = ev.extendedProps?.type || 'custom';
+  const prevMonth = () => setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
+  const goToToday = () => setCurrentDate(new Date());
 
-    setSelectedEvent({
-      title: ev.title,
-      date: ev.startStr || ev.start?.toISOString().split('T')[0] || '',
-      type,
-      globalName: ev.extendedProps?.globalName,
-      description: ev.extendedProps?.description,
-    });
-  };
+  const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const prevMonthDays = new Date(currentYear, currentMonth, 0).getDate();
+  const totalGridCells = Math.ceil((firstDayIndex + daysInMonth) / 7) * 7;
 
-  // Handle click on date cell to add custom event
-  const handleDateClick = (arg: any) => {
-    setSelectedDateForAdd(arg.dateStr);
-    setIsAddModalOpen(true);
-  };
-
-  // Handle creation of new user custom event
-  const handleCreateCustomEvent = (e: React.FormEvent) => {
+  const handleCreateEvent = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEventTitle.trim() || !selectedDateForAdd) return;
 
-    const newEv: any = {
+    const newEv: CalendarEvent = {
       id: `user-${Date.now()}`,
       title: `⭐ ${newEventTitle.trim()}`,
       start: selectedDateForAdd,
-      allDay: true,
-      backgroundColor: '#0284c7',
-      borderColor: '#0369a1',
-      textColor: '#ffffff',
-      extendedProps: {
-        type: 'custom',
-        description: newEventDesc.trim() || 'User created event',
-      },
+      type: 'custom',
+      description: newEventDesc.trim() || 'Custom event',
+      bgColor: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
     };
 
     setCustomEvents((prev) => [...prev, newEv]);
@@ -200,125 +191,178 @@ export const CalendarApp: React.FC = () => {
     setNewEventDesc('');
   };
 
-  // Combine Nager.Date Indian holidays + Custom events
-  const allCalendarEvents = [...holidays, ...customEvents];
-
-  if (!isMounted) {
+  const isToday = (dayNum: number) => {
+    const today = new Date();
     return (
-      <div className="w-full h-full flex items-center justify-center bg-slate-950 text-cyan-400">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
-          <span className="text-xs font-mono text-slate-400">Loading Calendar...</span>
-        </div>
-      </div>
+      today.getDate() === dayNum &&
+      today.getMonth() === currentMonth &&
+      today.getFullYear() === currentYear
     );
-  }
+  };
+
+  if (!isMounted) return null;
 
   return (
     <div
       className={`h-full flex flex-col font-sans select-text overflow-hidden transition-colors ${
-        theme === 'light' ? 'bg-slate-50 text-slate-800' : 'bg-slate-950 text-slate-100'
+        theme === 'light' ? 'bg-white text-slate-900' : 'bg-slate-950 text-slate-100'
       }`}
     >
-      {/* Calendar Header Bar */}
+      {/* Clean Minimal Header */}
       <div
-        className={`h-14 px-4 border-b flex items-center justify-between shrink-0 ${
-          theme === 'light'
-            ? 'bg-white border-slate-200 shadow-sm'
-            : 'bg-slate-900/90 border-white/10'
+        className={`h-14 px-6 border-b flex items-center justify-between shrink-0 ${
+          theme === 'light' ? 'border-slate-200 bg-slate-50' : 'border-white/10 bg-slate-900/60'
         }`}
       >
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-red-500/15 border border-red-500/30 text-red-500">
-            <CalendarIcon size={20} />
-          </div>
-          <div>
-            <h2 className="text-base font-bold tracking-tight">Calendar</h2>
-            <p className="text-[11px] opacity-60 font-mono">
-              India Public Holidays (Nager.Date) + Custom Milestones
-            </p>
-          </div>
+        {/* Left: App Title */}
+        <div className="flex items-center gap-2.5">
+          <CalendarIcon size={20} className="text-red-500" />
+          <h2 className="text-base font-bold tracking-tight">Calendar</h2>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Status Indicator */}
-          {isLoadingHolidays ? (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-mono">
-              <RefreshCw size={12} className="animate-spin" />
-              <span>Fetching Indian Holidays...</span>
-            </div>
-          ) : apiError ? (
-            <div
-              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 text-amber-400 text-xs font-mono cursor-pointer"
-              onClick={() => displayedYear && fetchHolidaysForYear(displayedYear)}
-              title="Click to retry loading Indian holidays"
-            >
-              <AlertCircle size={12} />
-              <span>{apiError} (Retry)</span>
-            </div>
-          ) : (
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-mono">
-              <Check size={12} />
-              <span>India ({displayedYear}) Sync Active</span>
-            </div>
-          )}
-
-          {/* Add Custom Event Button */}
+        {/* Center: Month Navigation */}
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => {
-              setSelectedDateForAdd(new Date().toISOString().split('T')[0]);
-              setIsAddModalOpen(true);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-md shadow-blue-600/20 cursor-pointer"
+            onClick={prevMonth}
+            className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
           >
-            <Plus size={15} />
-            <span>Add Event</span>
+            <ChevronLeft size={18} />
+          </button>
+
+          <span className="text-sm font-bold text-white tracking-wide min-w-[140px] text-center">
+            {MONTHS[currentMonth]} {currentYear}
+          </span>
+
+          <button
+            onClick={nextMonth}
+            className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+          >
+            <ChevronRight size={18} />
+          </button>
+
+          <button
+            onClick={goToToday}
+            className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold transition-colors text-slate-200"
+          >
+            Today
           </button>
         </div>
-      </div>
 
-      {/* Main FullCalendar Area */}
-      <div className="flex-1 p-4 overflow-y-auto custom-scrollbar relative">
-        <FullCalendar
-          plugins={[dayGridPlugin as any, timeGridPlugin as any, interactionPlugin as any]}
-          initialView="dayGridMonth"
-          headerToolbar={{
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay',
+        {/* Right: Add Event Button */}
+        <button
+          onClick={() => {
+            setSelectedDateForAdd(new Date().toISOString().split('T')[0]);
+            setIsAddModalOpen(true);
           }}
-          editable={false}
-          selectable={true}
-          events={allCalendarEvents}
-          datesSet={handleDatesSet}
-          eventClick={handleEventClick}
-          dateClick={handleDateClick}
-          height="100%"
-          aspectRatio={1.6}
-        />
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-md shadow-blue-600/20 cursor-pointer"
+        >
+          <Plus size={15} />
+          <span>Add Event</span>
+        </button>
       </div>
 
-      {/* Event Details Modal */}
+      {/* Clean Calendar Grid */}
+      <div className="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar flex flex-col">
+        {/* Day Names Row */}
+        <div className="grid grid-cols-7 mb-2 text-center text-xs font-semibold text-slate-400 border-b border-white/10 pb-2">
+          {DAYS.map((d) => (
+            <div key={d}>{d}</div>
+          ))}
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-7 flex-1 gap-2 auto-rows-fr">
+          {Array.from({ length: totalGridCells }).map((_, index) => {
+            const dayOffset = index - firstDayIndex + 1;
+            const isCurrentMonthDay = dayOffset > 0 && dayOffset <= daysInMonth;
+
+            let dayNum = dayOffset;
+            let cellMonth = currentMonth;
+            let cellYear = currentYear;
+
+            if (dayOffset <= 0) {
+              dayNum = prevMonthDays + dayOffset;
+              cellMonth = currentMonth - 1;
+            } else if (dayOffset > daysInMonth) {
+              dayNum = dayOffset - daysInMonth;
+              cellMonth = currentMonth + 1;
+            }
+
+            const cellDate = new Date(cellYear, cellMonth, dayNum);
+            const dateStr = `${cellDate.getFullYear()}-${String(
+              cellDate.getMonth() + 1
+            ).padStart(2, '0')}-${String(cellDate.getDate()).padStart(2, '0')}`;
+
+            const dayEvents = getEventsForDate(dateStr);
+            const isTodayCell = isCurrentMonthDay && isToday(dayNum);
+
+            return (
+              <div
+                key={index}
+                onClick={() => {
+                  setSelectedDateForAdd(dateStr);
+                  setIsAddModalOpen(true);
+                }}
+                className={`min-h-[85px] p-2 rounded-2xl border flex flex-col transition-all cursor-pointer ${
+                  isCurrentMonthDay
+                    ? theme === 'light'
+                      ? 'bg-slate-50 border-slate-200 hover:border-blue-400'
+                      : 'bg-slate-900/50 border-white/10 hover:border-blue-500/50'
+                    : 'opacity-20 bg-transparent border-transparent'
+                } ${isTodayCell ? 'ring-2 ring-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/10' : ''}`}
+              >
+                {/* Date Header */}
+                <div className="flex items-center justify-between mb-1">
+                  <span
+                    className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center ${
+                      isTodayCell
+                        ? 'bg-blue-500 text-white font-extrabold'
+                        : isCurrentMonthDay
+                        ? 'text-slate-200'
+                        : 'text-slate-500'
+                    }`}
+                  >
+                    {dayNum}
+                  </span>
+                </div>
+
+                {/* Events list */}
+                <div className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
+                  {dayEvents.map((ev) => (
+                    <div
+                      key={ev.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedEvent(ev);
+                      }}
+                      className={`text-[11px] font-medium px-2 py-0.5 rounded-lg border truncate transition-transform hover:scale-[1.02] ${ev.bgColor}`}
+                    >
+                      {ev.title}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Selected Event Details Modal */}
       {selectedEvent && (
         <div className="fixed inset-0 z-[9990] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div
-            className={`w-full max-w-md rounded-2xl p-6 shadow-2xl border ${
-              theme === 'light'
-                ? 'bg-white border-slate-200 text-slate-800'
-                : 'bg-slate-900 border-white/15 text-white'
-            }`}
-          >
+          <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl border bg-slate-900 border-white/15 text-white">
             <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-              <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                 {selectedEvent.type === 'holiday' ? (
-                  <Flag size={18} className="text-red-500" />
+                  <>
+                    <Flag size={16} className="text-red-400" /> Indian Public Holiday
+                  </>
                 ) : (
-                  <Sparkles size={18} className="text-cyan-400" />
+                  <>
+                    <Sparkles size={16} className="text-blue-400" /> Portfolio Event
+                  </>
                 )}
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  {selectedEvent.type === 'holiday' ? 'Indian Public Holiday' : 'Portfolio Event'}
-                </span>
-              </div>
+              </span>
               <button
                 onClick={() => setSelectedEvent(null)}
                 className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white"
@@ -327,18 +371,11 @@ export const CalendarApp: React.FC = () => {
               </button>
             </div>
 
-            <h3 className="text-xl font-bold mb-2">{selectedEvent.title}</h3>
-            <div className="text-xs font-mono text-cyan-400 mb-4">Date: {selectedEvent.date}</div>
-
-            {selectedEvent.globalName && (
-              <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs mb-3">
-                <span className="text-slate-400">Global Name: </span>
-                <span className="font-semibold">{selectedEvent.globalName}</span>
-              </div>
-            )}
+            <h3 className="text-lg font-bold mb-1">{selectedEvent.title}</h3>
+            <div className="text-xs font-mono text-blue-400 mb-4">Date: {selectedEvent.start}</div>
 
             {selectedEvent.description && (
-              <p className="text-xs opacity-80 leading-relaxed p-3 rounded-xl bg-white/5 border border-white/10 mb-4">
+              <p className="text-xs text-slate-300 leading-relaxed p-3.5 rounded-xl bg-white/5 border border-white/10 mb-4">
                 {selectedEvent.description}
               </p>
             )}
@@ -353,19 +390,13 @@ export const CalendarApp: React.FC = () => {
         </div>
       )}
 
-      {/* Add Custom Event Modal */}
+      {/* Add Event Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-[9990] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div
-            className={`w-full max-w-md rounded-2xl p-6 shadow-2xl border ${
-              theme === 'light'
-                ? 'bg-white border-slate-200 text-slate-800'
-                : 'bg-slate-900 border-white/15 text-white'
-            }`}
-          >
+          <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl border bg-slate-900 border-white/15 text-white">
             <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                <Plus size={14} /> Add Custom Event
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                <Plus size={14} /> Add Event
               </span>
               <button
                 onClick={() => setIsAddModalOpen(false)}
@@ -375,7 +406,7 @@ export const CalendarApp: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateCustomEvent} className="space-y-4">
+            <form onSubmit={handleCreateEvent} className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-slate-400 block mb-1">Date</label>
                 <input
@@ -383,34 +414,30 @@ export const CalendarApp: React.FC = () => {
                   required
                   value={selectedDateForAdd}
                   onChange={(e) => setSelectedDateForAdd(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-800/80 border border-white/15 text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/15 text-xs text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-400 block mb-1">
-                  Event Title *
-                </label>
+                <label className="text-xs font-semibold text-slate-400 block mb-1">Event Title *</label>
                 <input
                   type="text"
                   required
                   value={newEventTitle}
                   onChange={(e) => setNewEventTitle(e.target.value)}
-                  placeholder="Hackathon Demo / Interview..."
-                  className="w-full px-3 py-2 rounded-xl bg-slate-800/80 border border-white/15 text-xs text-white focus:outline-none focus:border-blue-500"
+                  placeholder="Meeting / Hackathon..."
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/15 text-xs text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-400 block mb-1">
-                  Description
-                </label>
+                <label className="text-xs font-semibold text-slate-400 block mb-1">Description</label>
                 <textarea
                   rows={3}
                   value={newEventDesc}
                   onChange={(e) => setNewEventDesc(e.target.value)}
                   placeholder="Event details..."
-                  className="w-full px-3 py-2 rounded-xl bg-slate-800/80 border border-white/15 text-xs text-white focus:outline-none focus:border-blue-500 resize-none"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/15 text-xs text-white focus:outline-none focus:border-blue-500 resize-none"
                 />
               </div>
 
