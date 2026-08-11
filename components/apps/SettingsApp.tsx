@@ -59,9 +59,10 @@ export const SettingsApp: React.FC = () => {
           {WALLPAPERS.map((wall) => {
             const isSelected = wallpaperId === wall.id;
             const match = wall.thumbnail.match(/url\(['"]?([^'"]+)['"]?\)/);
-            const rawThumbUrl = match ? match[1] : null;
+            const rawThumbUrl = match ? match[1] : wall.thumbnail;
             const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-            const thumbUrl = rawThumbUrl ? `${basePath}${rawThumbUrl}` : null;
+            const cleanPath = rawThumbUrl.startsWith('/') ? rawThumbUrl : `/${rawThumbUrl}`;
+            const thumbUrl = rawThumbUrl.startsWith('http') ? rawThumbUrl : `${basePath}${cleanPath}`;
 
             return (
               <button
@@ -72,16 +73,22 @@ export const SettingsApp: React.FC = () => {
                     ? 'border-cyan-400 ring-2 ring-cyan-500/50 scale-105'
                     : 'border-white/10 hover:border-white/30'
                 }`}
-                style={!thumbUrl ? { background: wall.thumbnail } : undefined}
+                style={{
+                  backgroundImage: `url("${thumbUrl}")`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
               >
-                {thumbUrl && (
-                  <img
-                    src={thumbUrl}
-                    alt={wall.name}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
+                <img
+                  src={thumbUrl}
+                  alt={wall.name}
+                  className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-300"
+                  onError={(e) => {
+                    // Hide broken img tag so CSS background handles preview smoothly
+                    (e.currentTarget as HTMLElement).style.display = 'none';
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent pointer-events-none" />
                 {isSelected && (
                   <div className="absolute top-2 right-2 p-1 rounded-full bg-cyan-500 text-slate-950 shadow-md z-10">
                     <Check size={12} />

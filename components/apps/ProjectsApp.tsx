@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { PROJECTS } from '../../data/portfolio';
 import { Project } from '../../types';
+import { OptimizedImage } from '../ui/OptimizedImage';
 import { Search, ExternalLink, Github, Sparkles, Filter, Layers, CheckCircle } from 'lucide-react';
 
 export const ProjectsApp: React.FC = () => {
@@ -77,12 +78,13 @@ export const ProjectsApp: React.FC = () => {
             <div>
               {/* Image Preview Banner */}
               <div className="relative h-44 w-full rounded-xl overflow-hidden mb-4 bg-slate-950 border border-white/10">
-                <img
+                <OptimizedImage
                   src={project.imageUrl}
                   alt={project.title}
+                  aspectRatio="h-44 w-full"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-slate-950/80 backdrop-blur-md border border-white/10 text-[10px] font-mono text-cyan-300">
+                <div className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded-lg bg-slate-950/80 backdrop-blur-md border border-white/10 text-[10px] font-mono text-cyan-300">
                   {project.category}
                 </div>
               </div>

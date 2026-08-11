@@ -3,14 +3,29 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSystemStore } from '../../store/useSystemStore';
+import { PROJECTS, PHOTOS } from '../../data/portfolio';
 
 export const PortfolioLoadingScreen: React.FC = () => {
   const { setBootStage } = useSystemStore();
 
   useEffect(() => {
+    // Parallel Image Preloading Engine
+    // Pre-cache all project images & photo assets into browser HTTP memory cache
+    const urlsToPreload = [
+      ...PROJECTS.map((p) => p.imageUrl),
+      ...PHOTOS.map((ph) => ph.url),
+    ];
+
+    urlsToPreload.forEach((url) => {
+      if (url && typeof window !== 'undefined') {
+        const img = new Image();
+        img.src = url;
+      }
+    });
+
     const timer = setTimeout(() => {
       setBootStage('lockscreen');
-    }, 2500);
+    }, 2200);
 
     return () => clearTimeout(timer);
   }, [setBootStage]);

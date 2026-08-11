@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { PHOTOS } from '../../data/portfolio';
 import { PhotoItem } from '../../types';
+import { OptimizedImage } from '../ui/OptimizedImage';
 import { Image as ImageIcon, Filter, Maximize2, X, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
 export const PhotosApp: React.FC = () => {
@@ -57,9 +58,10 @@ export const PhotosApp: React.FC = () => {
             className="group relative rounded-2xl overflow-hidden bg-slate-900 border border-white/10 hover:border-cyan-400/50 cursor-pointer shadow-lg transition-all"
           >
             <div className="h-48 w-full overflow-hidden">
-              <img
+              <OptimizedImage
                 src={photo.url}
                 alt={photo.title}
+                aspectRatio="h-48 w-full"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
             </div>
