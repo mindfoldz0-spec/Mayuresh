@@ -54,6 +54,9 @@ export const SkillsApp: React.FC = () => {
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
+      }
     };
   }, []);
 
@@ -104,7 +107,9 @@ export const SkillsApp: React.FC = () => {
 
       audio.onended = () => {
         setIsSpeaking(false);
-        setVoiceStatus('Tap microphone to speak');
+        setVoiceStatus('Listening to recruiter...');
+        // Auto-restart listening after speaking
+        startVoiceRecognition();
       };
 
       audio.onerror = () => {
@@ -137,7 +142,9 @@ export const SkillsApp: React.FC = () => {
 
     utterance.onend = () => {
       setIsSpeaking(false);
-      setVoiceStatus('Tap microphone to speak');
+      setVoiceStatus('Listening to recruiter...');
+      // Auto-restart listening after speaking
+      startVoiceRecognition();
     };
 
     utterance.onerror = () => {
@@ -189,28 +196,30 @@ export const SkillsApp: React.FC = () => {
     }
   };
 
-  // Handle Speech Recognition toggle
-  const toggleVoiceRecognition = () => {
+  // Explicitly start speech recognition with getUserMedia mic permissions
+  const startVoiceRecognition = async () => {
     if (typeof window === 'undefined') return;
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert('Speech recognition is not supported in this browser. You can type or click preset queries.');
-      return;
-    }
-
-    if (isListening) {
-      if (recognitionRef.current) recognitionRef.current.stop();
-      setIsListening(false);
-      setVoiceStatus('Tap microphone to speak');
+      setVoiceStatus('Speech Recognition not supported');
       return;
     }
 
     try {
+      // 1. Explicitly request microphone access permission
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+
       if (currentAudioRef.current) currentAudioRef.current.pause();
       if (window.speechSynthesis) window.speechSynthesis.cancel();
       setIsSpeaking(false);
+
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
+      }
 
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
@@ -229,7 +238,8 @@ export const SkillsApp: React.FC = () => {
         handleSendMessage(transcript);
       };
 
-      recognition.onerror = () => {
+      recognition.onerror = (e: any) => {
+        console.warn('Speech recognition error:', e.error);
         setIsListening(false);
         setVoiceStatus('Tap microphone to speak');
       };
@@ -241,9 +251,30 @@ export const SkillsApp: React.FC = () => {
       recognitionRef.current = recognition;
       recognition.start();
     } catch (err) {
-      console.error(err);
+      console.error('Microphone permission / start error:', err);
       setIsListening(false);
+      setVoiceStatus('Microphone permission denied / unavailable');
     }
+  };
+
+  const toggleVoiceRecognition = () => {
+    if (isListening) {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
+      }
+      setIsListening(false);
+      setVoiceStatus('Tap microphone to speak');
+    } else {
+      startVoiceRecognition();
+    }
+  };
+
+  // Auto-connect to microphone when switching to Voice tab
+  const switchToVoiceTab = () => {
+    setActiveTab('voice');
+    setTimeout(() => {
+      startVoiceRecognition();
+    }, 150);
   };
 
   return (
@@ -264,7 +295,9 @@ export const SkillsApp: React.FC = () => {
             onClick={() => {
               if (currentAudioRef.current) currentAudioRef.current.pause();
               if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
+              if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} }
               setIsSpeaking(false);
+              setIsListening(false);
               setActiveTab('chat');
             }}
             className={`px-6 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 ${
@@ -276,7 +309,7 @@ export const SkillsApp: React.FC = () => {
             Chat
           </button>
           <button
-            onClick={() => setActiveTab('voice')}
+            onClick={switchToVoiceTab}
             className={`px-6 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 flex items-center gap-1.5 ${
               activeTab === 'voice'
                 ? 'bg-white text-slate-900 shadow-md font-bold'
@@ -417,10 +450,7 @@ export const SkillsApp: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => {
-                  setActiveTab('voice');
-                  toggleVoiceRecognition();
-                }}
+                onClick={switchToVoiceTab}
                 className="p-2 text-slate-500 hover:text-slate-900 transition-colors shrink-0"
                 title="Voice Mode"
               >
@@ -546,6 +576,7 @@ export const SkillsApp: React.FC = () => {
                 onClick={() => {
                   if (currentAudioRef.current) currentAudioRef.current.pause();
                   if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
+                  if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} }
                   setIsListening(false);
                   setIsSpeaking(false);
                   setActiveTab('chat');
