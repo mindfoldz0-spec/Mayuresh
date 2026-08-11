@@ -35,11 +35,13 @@ export const SkillsApp: React.FC = () => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
-  const [voiceStatus, setVoiceStatus] = useState('Tap microphone to speak');
+  const [voiceStatus, setVoiceStatus] = useState('Listening... Speak now');
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const shouldListenRef = useRef<boolean>(false);
+  const isSpeakingRef = useRef<boolean>(false);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -48,6 +50,7 @@ export const SkillsApp: React.FC = () => {
   // Clean up audio on unmount
   useEffect(() => {
     return () => {
+      shouldListenRef.current = false;
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
       }
@@ -88,7 +91,13 @@ export const SkillsApp: React.FC = () => {
   };
 
   const speakVoiceResponse = async (text: string) => {
-    // 1. Try Fish Audio Ultra-Realistic Human Voice TTS first
+    // Temporarily pause mic while AI speaks
+    shouldListenRef.current = false;
+    isSpeakingRef.current = true;
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+    }
+
     setVoiceStatus('Generating Fish Audio voice...');
     const audioUrl = await fetchFishAudioTts(text);
 
@@ -107,8 +116,9 @@ export const SkillsApp: React.FC = () => {
 
       audio.onended = () => {
         setIsSpeaking(false);
-        setVoiceStatus('Listening to recruiter...');
-        // Auto-restart listening after speaking
+        isSpeakingRef.current = false;
+        setVoiceStatus('Listening... Speak now');
+        // Auto-resume continuous mic after speaking
         startVoiceRecognition();
       };
 
@@ -118,7 +128,6 @@ export const SkillsApp: React.FC = () => {
 
       audio.play().catch(() => fallbackBrowserTts(text));
     } else {
-      // 2. Fallback to browser SpeechSynthesis if Fish Audio API reaches limit
       fallbackBrowserTts(text);
     }
   };
@@ -126,7 +135,8 @@ export const SkillsApp: React.FC = () => {
   const fallbackBrowserTts = (text: string) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) {
       setIsSpeaking(false);
-      setVoiceStatus('Tap microphone to speak');
+      isSpeakingRef.current = false;
+      startVoiceRecognition();
       return;
     }
 
@@ -142,14 +152,15 @@ export const SkillsApp: React.FC = () => {
 
     utterance.onend = () => {
       setIsSpeaking(false);
-      setVoiceStatus('Listening to recruiter...');
-      // Auto-restart listening after speaking
+      isSpeakingRef.current = false;
+      setVoiceStatus('Listening... Speak now');
       startVoiceRecognition();
     };
 
     utterance.onerror = () => {
       setIsSpeaking(false);
-      setVoiceStatus('Tap microphone to speak');
+      isSpeakingRef.current = false;
+      startVoiceRecognition();
     };
 
     window.speechSynthesis.speak(utterance);
@@ -170,7 +181,6 @@ export const SkillsApp: React.FC = () => {
     if (!textToSend) setInputText('');
     setIsLoadingAi(true);
 
-    // Call Groq API (ultra-fast Llama-3 800+ tokens/sec)
     const chatHistory = messages.map((m) => ({
       role: m.sender === 'user' ? ('user' as const) : ('assistant' as const),
       content: m.text,
@@ -190,13 +200,12 @@ export const SkillsApp: React.FC = () => {
 
     setMessages((prev) => [...prev, aiMsg]);
 
-    // If in Voice mode, trigger Fish Audio Voice TTS
     if (activeTab === 'voice') {
       speakVoiceResponse(finalResponse);
     }
   };
 
-  // Explicitly start speech recognition with getUserMedia mic permissions
+  // Continuous speech recognition engine with auto-restart on silent pause
   const startVoiceRecognition = async () => {
     if (typeof window === 'undefined') return;
 
@@ -207,8 +216,10 @@ export const SkillsApp: React.FC = () => {
       return;
     }
 
+    shouldListenRef.current = true;
+
     try {
-      // 1. Explicitly request microphone access permission
+      // 1. Explicitly request mic permission
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         await navigator.mediaDevices.getUserMedia({ audio: true });
       }
@@ -216,60 +227,87 @@ export const SkillsApp: React.FC = () => {
       if (currentAudioRef.current) currentAudioRef.current.pause();
       if (window.speechSynthesis) window.speechSynthesis.cancel();
       setIsSpeaking(false);
+      isSpeakingRef.current = false;
 
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch {}
       }
 
       const recognition = new SpeechRecognition();
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = false;
       recognition.lang = 'en-US';
 
       recognition.onstart = () => {
         setIsListening(true);
-        setVoiceStatus('Listening to recruiter...');
+        setVoiceStatus('Listening... Speak now');
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setIsListening(false);
-        setVoiceStatus('Processing Groq AI...');
-        handleSendMessage(transcript);
+        const lastResultIndex = event.results.length - 1;
+        const transcript = event.results[lastResultIndex][0].transcript;
+        if (transcript && transcript.trim()) {
+          setIsListening(false);
+          shouldListenRef.current = false;
+          setVoiceStatus('Processing Groq AI...');
+          handleSendMessage(transcript);
+        }
       };
 
       recognition.onerror = (e: any) => {
-        console.warn('Speech recognition error:', e.error);
-        setIsListening(false);
-        setVoiceStatus('Tap microphone to speak');
+        console.warn('Speech recognition event:', e.error);
+        // Ignore benign no-speech error & keep listening
+        if (e.error === 'no-speech' || e.error === 'network') {
+          if (shouldListenRef.current && !isSpeakingRef.current) {
+            try { recognition.start(); } catch {}
+          }
+        } else {
+          setIsListening(false);
+          setVoiceStatus('Tap microphone to speak');
+        }
       };
 
       recognition.onend = () => {
-        setIsListening(false);
+        // Auto-restart recognition if shouldListenRef is true & AI is not speaking
+        if (shouldListenRef.current && !isSpeakingRef.current) {
+          try {
+            recognition.start();
+            setIsListening(true);
+          } catch {
+            setIsListening(false);
+          }
+        } else {
+          setIsListening(false);
+        }
       };
 
       recognitionRef.current = recognition;
       recognition.start();
     } catch (err) {
-      console.error('Microphone permission / start error:', err);
+      console.error('Microphone permission error:', err);
       setIsListening(false);
-      setVoiceStatus('Microphone permission denied / unavailable');
+      shouldListenRef.current = false;
+      setVoiceStatus('Microphone permission required');
     }
+  };
+
+  const stopVoiceRecognition = () => {
+    shouldListenRef.current = false;
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+    }
+    setIsListening(false);
+    setVoiceStatus('Tap microphone to speak');
   };
 
   const toggleVoiceRecognition = () => {
     if (isListening) {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch {}
-      }
-      setIsListening(false);
-      setVoiceStatus('Tap microphone to speak');
+      stopVoiceRecognition();
     } else {
       startVoiceRecognition();
     }
   };
 
-  // Auto-connect to microphone when switching to Voice tab
   const switchToVoiceTab = () => {
     setActiveTab('voice');
     setTimeout(() => {
@@ -293,11 +331,10 @@ export const SkillsApp: React.FC = () => {
         <div className="bg-slate-100 p-1 rounded-full flex items-center border border-slate-200/60 shadow-inner">
           <button
             onClick={() => {
+              stopVoiceRecognition();
               if (currentAudioRef.current) currentAudioRef.current.pause();
               if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
-              if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} }
               setIsSpeaking(false);
-              setIsListening(false);
               setActiveTab('chat');
             }}
             className={`px-6 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 ${
@@ -472,7 +509,7 @@ export const SkillsApp: React.FC = () => {
           </form>
         </div>
       ) : (
-        /* VOICE MODE VIEW (Exact 100% Perfect Circle with Swirling Liquid Colors Inside) */
+        /* VOICE MODE VIEW */
         <div className="flex-1 bg-slate-50 relative flex flex-col items-center justify-between p-8 text-slate-900 overflow-hidden">
           {/* Top Voice Header */}
           <div className="w-full flex items-center justify-between z-10">
@@ -486,9 +523,8 @@ export const SkillsApp: React.FC = () => {
             </button>
           </div>
 
-          {/* PERFECT FLUID CIRCLE (Fixed 100% Round Container) */}
+          {/* PERFECT FLUID CIRCLE */}
           <div className="relative flex items-center justify-center my-auto">
-            {/* Soft Outer Ambient Glow */}
             <motion.div
               animate={{
                 scale: isListening || isSpeaking ? [1, 1.25, 1] : [1, 1.05, 1],
@@ -498,7 +534,6 @@ export const SkillsApp: React.FC = () => {
               className="absolute w-72 h-72 rounded-full bg-gradient-to-r from-amber-400/40 via-orange-500/30 to-red-400/40 blur-3xl pointer-events-none"
             />
 
-            {/* Perfect Round Circle Container */}
             <div
               onClick={toggleVoiceRecognition}
               className="w-60 h-60 md:w-64 md:h-64 rounded-full overflow-hidden shadow-[0_20px_50px_rgba(255,106,0,0.35)] relative flex items-center justify-center cursor-pointer border-4 border-white/80 shrink-0"
@@ -507,7 +542,6 @@ export const SkillsApp: React.FC = () => {
                 borderRadius: '50%',
               }}
             >
-              {/* Internal Flowing Color Fluid Layer 1 */}
               <motion.div
                 animate={{
                   rotate: [0, 360],
@@ -521,7 +555,6 @@ export const SkillsApp: React.FC = () => {
                 }}
               />
 
-              {/* Internal Flowing Color Fluid Layer 2 */}
               <motion.div
                 animate={{
                   x: [-35, 35, -35],
@@ -558,7 +591,6 @@ export const SkillsApp: React.FC = () => {
 
             {/* Controls Right */}
             <div className="flex items-center gap-2">
-              {/* Mic Toggle Button */}
               <button
                 onClick={toggleVoiceRecognition}
                 className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm ${
@@ -571,13 +603,11 @@ export const SkillsApp: React.FC = () => {
                 {isListening ? <MicOff size={18} /> : <Mic size={18} />}
               </button>
 
-              {/* Close Voice Mode Button */}
               <button
                 onClick={() => {
+                  stopVoiceRecognition();
                   if (currentAudioRef.current) currentAudioRef.current.pause();
                   if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
-                  if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} }
-                  setIsListening(false);
                   setIsSpeaking(false);
                   setActiveTab('chat');
                 }}
