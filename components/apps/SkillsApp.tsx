@@ -45,6 +45,11 @@ export const SkillsApp: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const vadIntervalRef = useRef<any>(null);
+  const silenceTimerRef = useRef<any>(null);
+  const hasSpeechRef = useRef<boolean>(false);
   const isSpeakingRef = useRef<boolean>(false);
   const isRecordingRef = useRef<boolean>(false);
 
@@ -55,14 +60,9 @@ export const SkillsApp: React.FC = () => {
   // Clean up on unmount
   useEffect(() => {
     return () => {
+      stopRecording();
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
-      }
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-      }
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        try { mediaRecorderRef.current.stop(); } catch {}
       }
     };
   }, []);
@@ -143,7 +143,14 @@ export const SkillsApp: React.FC = () => {
       audio.onended = () => {
         setIsSpeaking(false);
         isSpeakingRef.current = false;
-        setVoiceStatus('Tap microphone to speak');
+        // Auto-restart hands-free listening loop!
+        if (activeTab === 'voice') {
+          setTimeout(() => {
+            startRecording();
+          }, 300);
+        } else {
+          setVoiceStatus('Tap microphone to speak');
+        }
       };
 
       audio.onerror = () => {
@@ -202,19 +209,30 @@ export const SkillsApp: React.FC = () => {
     }
   };
 
-  // ===== NEW: MediaRecorder + Groq Whisper STT Engine =====
+  // ===== HANDS-FREE AUTOMATIC VAD (Voice Activity Detection) ENGINE =====
   const startRecording = async () => {
     if (typeof window === 'undefined') return;
 
     try {
-      // Stop any playing audio first
+      // Stop any existing recorder/VAD loop
+      stopRecording();
+
       if (currentAudioRef.current) currentAudioRef.current.pause();
       setIsSpeaking(false);
       isSpeakingRef.current = false;
 
-      setVoiceStatus('Requesting microphone...');
+      setVoiceStatus('Listening... Speak anytime');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
+
+      // Initialize Web Audio API Analyser Node for VAD
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = audioCtx;
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      analyserRef.current = analyser;
 
       // Choose best available audio format
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
@@ -225,6 +243,7 @@ export const SkillsApp: React.FC = () => {
 
       const recorder = new MediaRecorder(stream, { mimeType });
       audioChunksRef.current = [];
+      hasSpeechRef.current = false;
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -233,19 +252,19 @@ export const SkillsApp: React.FC = () => {
       };
 
       recorder.onstop = async () => {
-        // Release mic
-        if (mediaStreamRef.current) {
-          mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-          mediaStreamRef.current = null;
-        }
+        // Clean up VAD intervals
+        cleanupAudioNodes();
 
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         audioChunksRef.current = [];
 
-        if (audioBlob.size < 1000) {
-          setVoiceStatus('No speech detected. Try again.');
+        if (audioBlob.size < 1200 || !hasSpeechRef.current) {
           setIsListening(false);
           isRecordingRef.current = false;
+          // If no speech was detected, auto-restart listening
+          if (activeTab === 'voice' && !isSpeakingRef.current) {
+            startRecording();
+          }
           return;
         }
 
@@ -255,32 +274,64 @@ export const SkillsApp: React.FC = () => {
 
         const transcript = await transcribeAudio(audioBlob);
 
-        if (transcript && transcript.trim()) {
+        if (transcript && transcript.trim() && transcript.trim().length > 1) {
           setVoiceTranscript(transcript.trim());
           setVoiceStatus('Processing AI...');
           setVoiceAiReply('');
           handleSendMessage(transcript.trim());
         } else {
-          setVoiceStatus('Could not understand. Tap mic to try again.');
+          setVoiceStatus('Listening... Speak anytime');
           setVoiceTranscript('');
+          if (activeTab === 'voice' && !isSpeakingRef.current) {
+            startRecording();
+          }
         }
       };
 
       recorder.onerror = () => {
         setIsListening(false);
         isRecordingRef.current = false;
-        setVoiceStatus('Recording error. Tap mic to try again.');
-        if (mediaStreamRef.current) {
-          mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-          mediaStreamRef.current = null;
-        }
+        cleanupAudioNodes();
       };
 
       mediaRecorderRef.current = recorder;
-      recorder.start(100); // Collect data every 100ms
+      recorder.start(100); // Collect audio chunks every 100ms
       isRecordingRef.current = true;
       setIsListening(true);
-      setVoiceStatus('🎤 Listening... Tap mic when done');
+
+      // ===== VAD REAL-TIME MONITORING LOOP =====
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      vadIntervalRef.current = setInterval(() => {
+        if (isSpeakingRef.current || !isRecordingRef.current) return;
+
+        analyser.getByteFrequencyData(dataArray);
+        const sum = dataArray.reduce((acc, val) => acc + val, 0);
+        const volume = sum / dataArray.length;
+
+        // Speech Detection Threshold
+        if (volume > 10) {
+          if (!hasSpeechRef.current) {
+            hasSpeechRef.current = true;
+            setVoiceStatus('🎙️ Hearing speech...');
+          }
+          if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+          }
+        } else if (hasSpeechRef.current) {
+          // Silence Detection: User stopped speaking
+          setVoiceStatus('⏸️ Paused speaking...');
+          if (!silenceTimerRef.current) {
+            silenceTimerRef.current = setTimeout(() => {
+              // 1.2s of silence detected -> Automatically finish & transcribe!
+              if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                mediaRecorderRef.current.stop();
+              }
+            }, 1200);
+          }
+        }
+      }, 80);
+
     } catch (err: any) {
       console.error('Microphone error:', err);
       setIsListening(false);
@@ -293,17 +344,38 @@ export const SkillsApp: React.FC = () => {
     }
   };
 
+  const cleanupAudioNodes = () => {
+    if (vadIntervalRef.current) {
+      clearInterval(vadIntervalRef.current);
+      vadIntervalRef.current = null;
+    }
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      try { audioContextRef.current.close(); } catch {}
+      audioContextRef.current = null;
+    }
+  };
+
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      setVoiceStatus('Processing...');
+      try { mediaRecorderRef.current.stop(); } catch {}
     }
+    cleanupAudioNodes();
     setIsListening(false);
+    isRecordingRef.current = false;
   };
 
   const toggleVoiceRecognition = () => {
     if (isRecordingRef.current) {
       stopRecording();
+      setVoiceStatus('Listening paused. Tap mic to resume.');
     } else {
       startRecording();
     }
@@ -311,6 +383,9 @@ export const SkillsApp: React.FC = () => {
 
   const switchToVoiceTab = () => {
     setActiveTab('voice');
+    setTimeout(() => {
+      startRecording();
+    }, 200);
   };
 
   return (
@@ -360,7 +435,7 @@ export const SkillsApp: React.FC = () => {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full border border-slate-200/60 shadow-sm">
             <Bot size={14} className="text-emerald-600" />
-            <span>Groq Llama-3 + Voice TTS</span>
+            <span>Groq Whisper + Llama-3 AI</span>
           </div>
         </div>
       </div>
@@ -422,65 +497,53 @@ export const SkillsApp: React.FC = () => {
                 </div>
               </div>
             ) : (
-              messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  {m.sender === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 mr-3 mt-1 shadow-md font-bold text-xs">
-                      GPT
-                    </div>
-                  )}
-
+              /* Message Trajectory */
+              <div className="space-y-4">
+                {messages.map((m) => (
                   <div
-                    className={`p-4 rounded-2xl max-w-[85%] text-sm leading-relaxed ${
-                      m.sender === 'user'
-                        ? 'bg-slate-200 text-slate-900 rounded-br-none shadow-sm font-medium'
-                        : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm whitespace-pre-wrap'
-                    }`}
+                    key={m.id}
+                    className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
                   >
-                    {m.text}
+                    <div
+                      className={`max-w-[80%] rounded-2xl p-4 text-xs leading-relaxed shadow-sm ${
+                        m.sender === 'user'
+                          ? 'bg-slate-900 text-white rounded-br-none font-medium'
+                          : 'bg-white text-slate-800 border border-slate-200/80 rounded-bl-none'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap">{m.text}</p>
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-1 px-1">{m.timestamp}</span>
                   </div>
-                </div>
-              ))
-            )}
+                ))}
 
-            {isLoadingAi && (
-              <div className="flex justify-start items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md font-bold text-xs">
-                  GPT
-                </div>
-                <div className="p-3 rounded-2xl bg-white border border-slate-200 text-xs font-mono text-slate-500 animate-pulse">
-                  Groq Llama-3 thinking...
-                </div>
+                {isLoadingAi && (
+                  <div className="flex items-center gap-2 text-xs text-slate-500 bg-white border border-slate-200 px-3.5 py-2 rounded-2xl w-fit shadow-sm">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />
+                    <span>Mayuresh AI is thinking...</span>
+                  </div>
+                )}
+
+                <div ref={chatBottomRef} />
               </div>
             )}
-            <div ref={chatBottomRef} />
           </div>
 
-          {/* Chat Input Bar */}
+          {/* Bottom Chat Input Form */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSendMessage();
             }}
-            className="relative mt-2"
+            className="mt-2 shrink-0"
           >
-            <div className="bg-white border border-slate-300/80 shadow-lg rounded-full px-4 py-3 flex items-center gap-3 transition-all focus-within:border-slate-400 focus-within:shadow-xl">
-              <button
-                type="button"
-                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors shrink-0"
-              >
-                <Plus size={20} />
-              </button>
-
+            <div className="relative bg-white border border-slate-300/80 rounded-full p-1.5 pl-5 flex items-center shadow-lg hover:border-slate-400 transition-colors">
               <input
                 type="text"
-                placeholder="Message ChatGPT..."
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                className="flex-1 bg-transparent border-none text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none select-text"
+                placeholder="Ask Mayuresh AI anything..."
+                className="w-full bg-transparent text-xs text-slate-900 placeholder-slate-400 outline-none pr-4"
               />
 
               <button
@@ -513,7 +576,7 @@ export const SkillsApp: React.FC = () => {
           <div className="w-full flex items-center justify-between z-10">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 px-3.5 py-1.5 rounded-full shadow-sm">
               <Bot size={15} className="text-emerald-600" />
-              <span>Groq Llama-3 Voice Mode</span>
+              <span>Groq Whisper Hands-Free Voice Mode</span>
             </div>
 
             <button className="p-2.5 rounded-full bg-white border border-slate-200 text-slate-700 shadow-sm hover:bg-slate-100 transition-all">
@@ -667,7 +730,7 @@ export const SkillsApp: React.FC = () => {
                     ? 'bg-amber-500 text-white animate-pulse'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
                 }`}
-                title={isListening ? 'Stop listening' : 'Start microphone'}
+                title={isListening ? 'Pause listening' : 'Start microphone'}
               >
                 {isListening ? <MicOff size={18} /> : <Mic size={18} />}
               </button>
