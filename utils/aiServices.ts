@@ -96,17 +96,34 @@ export async function fetchGroqChatCompletion(userQuery: string, history: { role
 
 export async function fetchFishAudioTts(textToSpeak: string): Promise<string | null> {
   try {
-    const apiKey = getFishAudioKey();
     const cleanText = textToSpeak.replace(/[*#•🚀🎮🎓✉️💻⚡]/g, '').trim();
     if (!cleanText) return null;
 
-    // Call Fish Audio TTS with model header 's2.1-pro-free'
+    // 1. Try server API proxy /api/tts (avoids browser CORS headers blocking)
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const proxyRes = await fetch(`${basePath}/api/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: cleanText }),
+      });
+
+      if (proxyRes.ok) {
+        const arrayBuffer = await proxyRes.arrayBuffer();
+        const blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+        return URL.createObjectURL(blob);
+      }
+    } catch {
+      // Proxy unavailable, proceed to client fallback
+    }
+
+    // 2. Direct client fetch fallback
+    const apiKey = getFishAudioKey();
     const response = await fetch('https://api.fish.audio/v1/tts', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'model': 's2.1-pro-free',
       },
       body: JSON.stringify({
         text: cleanText,
@@ -115,8 +132,6 @@ export async function fetchFishAudioTts(textToSpeak: string): Promise<string | n
     });
 
     if (!response.ok) {
-      const errText = await response.text();
-      console.warn('Fish Audio API returned:', response.status, errText);
       return null;
     }
 
