@@ -17,6 +17,7 @@ import {
   User,
   Mail,
   Bot,
+  Play,
 } from 'lucide-react';
 import { MAYURESH_PROFILE, PROJECTS, SKILL_CATEGORIES } from '../../data/portfolio';
 import { fetchGroqChatCompletion, fetchFishAudioTts } from '../../utils/aiServices';
@@ -35,7 +36,7 @@ export const SkillsApp: React.FC = () => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
-  const [voiceStatus, setVoiceStatus] = useState('Listening... Speak now');
+  const [voiceStatus, setVoiceStatus] = useState('Tap microphone to speak');
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -117,9 +118,7 @@ export const SkillsApp: React.FC = () => {
       audio.onended = () => {
         setIsSpeaking(false);
         isSpeakingRef.current = false;
-        setVoiceStatus('Listening... Speak now');
-        // Auto-resume continuous mic after speaking
-        startVoiceRecognition();
+        setVoiceStatus('Tap microphone to speak');
       };
 
       audio.onerror = () => {
@@ -136,7 +135,7 @@ export const SkillsApp: React.FC = () => {
     if (typeof window === 'undefined' || !window.speechSynthesis) {
       setIsSpeaking(false);
       isSpeakingRef.current = false;
-      startVoiceRecognition();
+      setVoiceStatus('Tap microphone to speak');
       return;
     }
 
@@ -146,7 +145,6 @@ export const SkillsApp: React.FC = () => {
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 
-    // Pick best natural English voice
     const voices = window.speechSynthesis.getVoices();
     const naturalVoice = voices.find(
       (v) => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('David'))
@@ -164,14 +162,13 @@ export const SkillsApp: React.FC = () => {
     utterance.onend = () => {
       setIsSpeaking(false);
       isSpeakingRef.current = false;
-      setVoiceStatus('Listening... Speak now');
-      startVoiceRecognition();
+      setVoiceStatus('Tap microphone to speak');
     };
 
     utterance.onerror = () => {
       setIsSpeaking(false);
       isSpeakingRef.current = false;
-      startVoiceRecognition();
+      setVoiceStatus('Tap microphone to speak');
     };
 
     window.speechSynthesis.speak(utterance);
@@ -223,16 +220,21 @@ export const SkillsApp: React.FC = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setVoiceStatus('Speech Recognition not supported');
+      setVoiceStatus('Speech Recognition unavailable');
       return;
     }
 
     shouldListenRef.current = true;
 
     try {
-      // 1. Explicitly request mic permission
+      // 1. Request microphone access and immediately release track so webkitSpeechRecognition can access microphone device
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach((track) => track.stop());
+        } catch {
+          // Ignore if already allowed
+        }
       }
 
       if (currentAudioRef.current) currentAudioRef.current.pause();
@@ -267,7 +269,6 @@ export const SkillsApp: React.FC = () => {
 
       recognition.onerror = (e: any) => {
         console.warn('Speech recognition event:', e.error);
-        // Ignore benign no-speech error & keep listening
         if (e.error === 'no-speech' || e.error === 'network') {
           if (shouldListenRef.current && !isSpeakingRef.current) {
             try { recognition.start(); } catch {}
@@ -279,7 +280,6 @@ export const SkillsApp: React.FC = () => {
       };
 
       recognition.onend = () => {
-        // Auto-restart recognition if shouldListenRef is true & AI is not speaking
         if (shouldListenRef.current && !isSpeakingRef.current) {
           try {
             recognition.start();
@@ -295,10 +295,10 @@ export const SkillsApp: React.FC = () => {
       recognitionRef.current = recognition;
       recognition.start();
     } catch (err) {
-      console.error('Microphone permission error:', err);
+      console.error('Microphone error:', err);
       setIsListening(false);
       shouldListenRef.current = false;
-      setVoiceStatus('Microphone permission required');
+      setVoiceStatus('Tap microphone to speak');
     }
   };
 
@@ -373,7 +373,7 @@ export const SkillsApp: React.FC = () => {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full border border-slate-200/60 shadow-sm">
             <Bot size={14} className="text-emerald-600" />
-            <span>Groq Llama-3 + Fish Audio</span>
+            <span>Groq Llama-3 + Voice TTS</span>
           </div>
         </div>
       </div>
@@ -526,7 +526,7 @@ export const SkillsApp: React.FC = () => {
           <div className="w-full flex items-center justify-between z-10">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 px-3.5 py-1.5 rounded-full shadow-sm">
               <Bot size={15} className="text-emerald-600" />
-              <span>Groq Llama-3 + Fish Audio Human Voice</span>
+              <span>Groq Llama-3 Voice Mode</span>
             </div>
 
             <button className="p-2.5 rounded-full bg-white border border-slate-200 text-slate-700 shadow-sm hover:bg-slate-100 transition-all">
@@ -535,50 +535,79 @@ export const SkillsApp: React.FC = () => {
           </div>
 
           {/* PERFECT FLUID CIRCLE */}
-          <div className="relative flex items-center justify-center my-auto">
-            <motion.div
-              animate={{
-                scale: isListening || isSpeaking ? [1, 1.25, 1] : [1, 1.05, 1],
-                opacity: isListening || isSpeaking ? [0.6, 0.9, 0.6] : [0.2, 0.4, 0.2],
-              }}
-              transition={{ repeat: Infinity, duration: isListening || isSpeaking ? 1.5 : 4, ease: 'easeInOut' }}
-              className="absolute w-72 h-72 rounded-full bg-gradient-to-r from-amber-400/40 via-orange-500/30 to-red-400/40 blur-3xl pointer-events-none"
-            />
-
-            <div
-              onClick={toggleVoiceRecognition}
-              className="w-60 h-60 md:w-64 md:h-64 rounded-full overflow-hidden shadow-[0_20px_50px_rgba(255,106,0,0.35)] relative flex items-center justify-center cursor-pointer border-4 border-white/80 shrink-0"
-              style={{
-                background: 'linear-gradient(135deg, #ff7e5f 0%, #feb47b 45%, #ff6a00 100%)',
-                borderRadius: '50%',
-              }}
-            >
+          <div className="relative flex flex-col items-center justify-center my-auto space-y-6">
+            <div className="relative flex items-center justify-center">
               <motion.div
                 animate={{
-                  rotate: [0, 360],
-                  scale: isListening || isSpeaking ? [1, 1.3, 1] : [1, 1.1, 1],
+                  scale: isListening || isSpeaking ? [1, 1.25, 1] : [1, 1.05, 1],
+                  opacity: isListening || isSpeaking ? [0.6, 0.9, 0.6] : [0.2, 0.4, 0.2],
                 }}
-                transition={{ repeat: Infinity, duration: isListening || isSpeaking ? 2.5 : 8, ease: 'linear' }}
-                className="absolute inset-[-30%] rounded-full opacity-80 pointer-events-none"
-                style={{
-                  background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95) 0%, rgba(255,180,100,0.8) 35%, rgba(255,106,0,0) 70%)',
-                  filter: 'blur(16px)',
-                }}
+                transition={{ repeat: Infinity, duration: isListening || isSpeaking ? 1.5 : 4, ease: 'easeInOut' }}
+                className="absolute w-72 h-72 rounded-full bg-gradient-to-r from-amber-400/40 via-orange-500/30 to-red-400/40 blur-3xl pointer-events-none"
               />
 
-              <motion.div
-                animate={{
-                  x: [-35, 35, -35],
-                  y: [-25, 25, -25],
-                  rotate: [360, 0],
-                }}
-                transition={{ repeat: Infinity, duration: 6, ease: 'easeInOut' }}
-                className="absolute inset-[-20%] rounded-full opacity-70 pointer-events-none"
+              <div
+                onClick={toggleVoiceRecognition}
+                className="w-60 h-60 md:w-64 md:h-64 rounded-full overflow-hidden shadow-[0_20px_50px_rgba(255,106,0,0.35)] relative flex items-center justify-center cursor-pointer border-4 border-white/80 shrink-0"
                 style={{
-                  background: 'radial-gradient(circle at 70% 70%, rgba(254,180,123,0.9) 0%, rgba(255,126,95,0.85) 45%, rgba(255,106,0,0) 80%)',
-                  filter: 'blur(20px)',
+                  background: 'linear-gradient(135deg, #ff7e5f 0%, #feb47b 45%, #ff6a00 100%)',
+                  borderRadius: '50%',
                 }}
-              />
+              >
+                <motion.div
+                  animate={{
+                    rotate: [0, 360],
+                    scale: isListening || isSpeaking ? [1, 1.3, 1] : [1, 1.1, 1],
+                  }}
+                  transition={{ repeat: Infinity, duration: isListening || isSpeaking ? 2.5 : 8, ease: 'linear' }}
+                  className="absolute inset-[-30%] rounded-full opacity-80 pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95) 0%, rgba(255,180,100,0.8) 35%, rgba(255,106,0,0) 70%)',
+                    filter: 'blur(16px)',
+                  }}
+                />
+
+                <motion.div
+                  animate={{
+                    x: [-35, 35, -35],
+                    y: [-25, 25, -25],
+                    rotate: [360, 0],
+                  }}
+                  transition={{ repeat: Infinity, duration: 6, ease: 'easeInOut' }}
+                  className="absolute inset-[-20%] rounded-full opacity-70 pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(circle at 70% 70%, rgba(254,180,123,0.9) 0%, rgba(255,126,95,0.85) 45%, rgba(255,106,0,0) 80%)',
+                    filter: 'blur(20px)',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Instant Voice Test Buttons */}
+            <div className="flex items-center justify-center gap-2 flex-wrap max-w-md">
+              <button
+                onClick={() => handleSendMessage("Tell me about Mayuresh Samel")}
+                className="px-3.5 py-1.5 rounded-full bg-white border border-slate-200 hover:border-slate-400 text-xs text-slate-700 font-medium shadow-sm transition-all flex items-center gap-1.5 active:scale-95"
+              >
+                <Play size={11} className="text-amber-500 fill-amber-500" />
+                <span>Tell me about Mayuresh</span>
+              </button>
+
+              <button
+                onClick={() => handleSendMessage("What are Mayuresh's technical skills?")}
+                className="px-3.5 py-1.5 rounded-full bg-white border border-slate-200 hover:border-slate-400 text-xs text-slate-700 font-medium shadow-sm transition-all flex items-center gap-1.5 active:scale-95"
+              >
+                <Play size={11} className="text-amber-500 fill-amber-500" />
+                <span>What are Mayuresh's skills?</span>
+              </button>
+
+              <button
+                onClick={() => handleSendMessage("Show me Mayuresh's software projects")}
+                className="px-3.5 py-1.5 rounded-full bg-white border border-slate-200 hover:border-slate-400 text-xs text-slate-700 font-medium shadow-sm transition-all flex items-center gap-1.5 active:scale-95"
+              >
+                <Play size={11} className="text-amber-500 fill-amber-500" />
+                <span>Show me software projects</span>
+              </button>
             </div>
           </div>
 
