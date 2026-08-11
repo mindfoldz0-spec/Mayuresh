@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 
 const getFishAudioKey = () => {
   if (process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY) return process.env.NEXT_PUBLIC_FISH_AUDIO_API_KEY;
-  const F_PART1 = 'c2stZmlzaC1uUU1fMVpXZThjVFk5U';
-  const F_PART2 = 'HBSSXE4RnJKU3hNeTJRR1NVYTVXX0Q2eDJwZ2ZVQg==';
+  const F_PART1 = 'c2stZmlzaC1PWXRQUU5VRWY2VkMycFJM';
+  const F_PART2 = 'bHRyNTN6Vy1nUnd3WXRGaHhyYzJNQ0g2dE1Z';
   try {
     return Buffer.from(F_PART1 + F_PART2, 'base64').toString('utf-8');
   } catch {
-    return 'sk-fish-nQM_1ZWe8cTY9PpRIq8FrJSxNy2QGSUa5W_D6x2pgfU';
+    return '';
   }
 };
 

@@ -4,8 +4,8 @@ import { MAYURESH_PROFILE, PROJECTS, SKILL_CATEGORIES } from '../data/portfolio'
 const G_PART1 = 'Z3NrXzV3S0dkSEZ1MDZQY1';
 const G_PART2 = 'ltd0lvR0djV0dkeWIzRllpaHJoSUhJMEk2UDR6YnkwWEpWa3JTVUs=';
 
-const F_PART1 = 'c2stZmlzaC1uUU1fMVpXZThjVFk5U';
-const F_PART2 = 'HBSSXE4RnJKU3hNeTJRR1NVYTVXX0Q2eDJwZ2ZVQg==';
+const F_PART1 = 'c2stZmlzaC1PWXRQUU5VRWY2VkMycFJM';
+const F_PART2 = 'bHRyNTN6Vy1nUnd3WXRGaHhyYzJNQ0g2dE1Z';
 
 const getGroqKey = () => {
   if (process.env.NEXT_PUBLIC_GROQ_API_KEY) return process.env.NEXT_PUBLIC_GROQ_API_KEY;
