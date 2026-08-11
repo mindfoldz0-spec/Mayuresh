@@ -26,8 +26,8 @@ export const Window: React.FC<WindowProps> = ({ windowState, children }) => {
   const isLight = theme === 'light';
 
   // Custom frameless liquid glass layout for Calendar & Settings Apps (fixed widget sizes, no full-screen stretching)
-  if (id === 'calculator' || id === 'settings') {
-    const targetWidth = id === 'settings' ? '700px' : '440px';
+  if (id === 'calendar' || id === 'settings') {
+    const targetWidth = id === 'settings' ? '750px' : '720px';
 
     return (
       <AnimatePresence mode="wait">

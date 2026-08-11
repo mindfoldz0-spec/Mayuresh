@@ -73,6 +73,10 @@ const LinkedInApp = dynamic(() => import('../apps/LinkedInApp').then((mod) => mo
   loading: () => <AppLoadingFallback />,
   ssr: false,
 });
+const RecycleBinApp = dynamic(() => import('../apps/RecycleBinApp').then((mod) => mod.RecycleBinApp), {
+  loading: () => <AppLoadingFallback />,
+  ssr: false,
+});
 
 export const WindowManager: React.FC = () => {
   const { windows } = useWindowStore();
@@ -88,13 +92,14 @@ export const WindowManager: React.FC = () => {
       case 'contact': return <ContactApp />;
       case 'explorer': return <FileExplorerApp />;
       case 'notepad': return <NotepadApp />;
-      case 'calculator': return <CalendarApp />;
+      case 'calendar': return <CalendarApp />;
       case 'settings': return <SettingsApp />;
       case 'terminal': return <TerminalApp />;
       case 'browser': return <BrowserApp />;
       case 'photos': return <PhotosApp />;
       case 'games': return <GamesApp />;
       case 'linkedin': return <LinkedInApp />;
+      case 'recycle-bin': return <RecycleBinApp />;
       default: return null;
     }
   };

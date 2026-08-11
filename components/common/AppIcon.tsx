@@ -8,7 +8,7 @@ export const REAL_ICONS_MAP: Record<string, string> = {
   // App ID → icon file
   explorer:     '/icons/explorer.png',
   notepad:      '/icons/notepad.png',
-  calculator:   '/icons/calendar.png',
+  calendar:     '/icons/calendar.png',
   settings:     '/icons/settings.png',
   terminal:     '/icons/terminal.png',
   about:        '/icons/about.png',
@@ -27,7 +27,7 @@ export const REAL_ICONS_MAP: Record<string, string> = {
   // Lucide icon name fallbacks
   Folder:    '/icons/explorer.png',
   FileText:  '/icons/notepad.png',
-  Calculator:'/icons/calendar.png',
+  Calendar:  '/icons/calendar.png',
   Settings:  '/icons/settings.png',
   Terminal:  '/icons/terminal.png',
   User:      '/icons/about.png',

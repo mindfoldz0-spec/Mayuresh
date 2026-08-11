@@ -16,7 +16,7 @@ import {
   ChevronLeft,
   Trash2,
   Paperclip,
-  Image,
+  Image as ImageIcon,
   Link2,
   Smile,
   X,
@@ -537,7 +537,7 @@ export const ContactApp: React.FC = () => {
                 <Paperclip size={16} className="hover:text-white cursor-pointer" />
                 <Link2 size={16} className="hover:text-white cursor-pointer" />
                 <Smile size={16} className="hover:text-white cursor-pointer" />
-                <Image size={16} className="hover:text-white cursor-pointer" />
+                <ImageIcon size={16} className="hover:text-white cursor-pointer" />
                 <Trash2
                   size={16}
                   onClick={() => setIsComposeOpen(false)}

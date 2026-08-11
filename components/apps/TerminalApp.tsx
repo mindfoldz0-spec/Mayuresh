@@ -149,7 +149,7 @@ export const TerminalApp: React.FC = () => {
           'contact',
           'explorer',
           'notepad',
-          'calculator',
+          'calendar',
           'settings',
           'terminal',
           'browser',

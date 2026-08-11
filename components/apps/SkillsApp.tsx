@@ -227,6 +227,9 @@ export const SkillsApp: React.FC = () => {
 
       // Initialize Web Audio API Analyser Node for VAD
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
       audioContextRef.current = audioCtx;
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
@@ -258,7 +261,7 @@ export const SkillsApp: React.FC = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         audioChunksRef.current = [];
 
-        if (audioBlob.size < 1200 || !hasSpeechRef.current) {
+        if (audioBlob.size < 400 || !hasSpeechRef.current) {
           setIsListening(false);
           isRecordingRef.current = false;
           // If no speech was detected, auto-restart listening
@@ -486,7 +489,7 @@ export const SkillsApp: React.FC = () => {
                     <div className="p-2 rounded-xl bg-cyan-50 text-cyan-600 shrink-0">
                       <Code size={16} />
                     </div>
-                    <span>What are Mayuresh's technical skills & engineering stack?</span>
+                    <span>What are Mayuresh&apos;s technical skills &amp; engineering stack?</span>
                   </button>
 
                   <button
@@ -496,7 +499,7 @@ export const SkillsApp: React.FC = () => {
                     <div className="p-2 rounded-xl bg-purple-50 text-purple-600 shrink-0">
                       <Briefcase size={16} />
                     </div>
-                    <span>Show me Mayuresh's top featured software projects</span>
+                    <span>Show me Mayuresh&apos;s top featured software projects</span>
                   </button>
 
                   <button
@@ -506,7 +509,7 @@ export const SkillsApp: React.FC = () => {
                     <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 shrink-0">
                       <User size={16} />
                     </div>
-                    <span>What is Mayuresh's educational & diploma background?</span>
+                    <span>What is Mayuresh&apos;s educational &amp; diploma background?</span>
                   </button>
 
                   <button
@@ -714,7 +717,7 @@ export const SkillsApp: React.FC = () => {
                 className="px-3.5 py-1.5 rounded-full bg-white border border-slate-200 hover:border-slate-400 text-xs text-slate-700 font-medium shadow-sm transition-all flex items-center gap-1.5 active:scale-95"
               >
                 <Play size={11} className="text-amber-500 fill-amber-500" />
-                <span>What are Mayuresh's skills?</span>
+                <span>What are Mayuresh&apos;s skills?</span>
               </button>
 
               <button

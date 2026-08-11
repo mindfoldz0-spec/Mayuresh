@@ -1,16 +1,5 @@
 import { NextResponse } from 'next/server';
 
-const getGroqKey = () => {
-  if (process.env.NEXT_PUBLIC_GROQ_API_KEY) return process.env.NEXT_PUBLIC_GROQ_API_KEY;
-  const G_PART1 = 'Z3NrXzV3S0dkSEZ1MDZQY1';
-  const G_PART2 = 'ltd0lvR0djV0dkeWIzRllpaHJoSUhJMEk2UDR6YnkwWEpWa3JTVUs=';
-  try {
-    return Buffer.from(G_PART1 + G_PART2, 'base64').toString('utf-8');
-  } catch {
-    return '';
-  }
-};
-
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -20,7 +9,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No audio file provided' }, { status: 400 });
     }
 
-    const apiKey = getGroqKey();
+    const apiKey = process.env.GROQ_API_KEY || process.env.NEXT_PUBLIC_GROQ_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Groq API key not configured' }, { status: 500 });
+    }
 
     // Forward to Groq Whisper API for transcription
     const groqFormData = new FormData();

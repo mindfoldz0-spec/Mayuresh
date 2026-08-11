@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { MAYURESH_PROFILE } from '../../data/portfolio';
 import { useWindowStore } from '../../store/useWindowStore';
 import {
@@ -8,170 +8,281 @@ import {
   Mail,
   Github,
   Linkedin,
-  Twitter,
-  Download,
-  Code2,
-  Sparkles,
   MapPin,
   ExternalLink,
-  CheckCircle2,
+  MousePointer,
+  PaintBucket,
+  Type,
+  Search,
+  Maximize2,
+  Minimize2,
+  X,
+  Pencil,
+  ChevronLeft,
+  ChevronRight,
+  GraduationCap,
   Briefcase,
+  Layers,
+  Sparkles,
 } from 'lucide-react';
 
 export const AboutApp: React.FC = () => {
   const { openWindow } = useWindowStore();
+  const [activeEducationIndex, setActiveEducationIndex] = useState(0);
+
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
+  const educationList = [
+    {
+      title: 'Diploma in Computer Engineering (2024)',
+      institution: '3rd Year Capstone Milestone',
+      desc: 'Engineered Lost Dune web game engine, custom AABB physics, and interactive web architectures.',
+    },
+    {
+      title: 'Bachelor of Computer Engineering',
+      institution: 'Software Engineering Major',
+      desc: 'Specializing in full stack web development, cloud deployments, and UI design systems.',
+    },
+  ];
 
   return (
-    <div className="p-6 md:p-8 space-y-8 select-text">
-      {/* Hero Profile Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-900/60 via-slate-900 to-cyan-950/60 border border-white/15 p-6 md:p-8 shadow-xl">
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 relative z-10">
-          {/* Avatar Graphic */}
-          <div className="relative shrink-0">
-            <div className="w-28 h-28 rounded-3xl bg-slate-900 border-2 border-cyan-400/50 p-1 shadow-2xl shadow-cyan-500/30 overflow-hidden flex items-center justify-center">
-              <img
-                src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/mayuresh.png`}
-                alt="Mayuresh"
-                className="w-full h-full object-cover rounded-[20px]"
-              />
-            </div>
-            <div className="absolute -bottom-2 -right-2 p-1.5 rounded-xl bg-emerald-500 border-2 border-slate-950 text-slate-950 shadow-md">
-              <CheckCircle2 size={16} />
-            </div>
+    <div className="w-full min-h-full p-3 sm:p-5 bg-[#a8dacb] text-[#1e1b18] font-sans select-text overflow-y-auto custom-scrollbar flex flex-col items-center justify-start">
+      {/* Retro Desktop Window Container (Exact Reference UI Design) */}
+      <div className="w-full max-w-4xl bg-[#f5ede0] border-2 border-[#23201d] rounded-2xl shadow-[8px_8px_0px_rgba(35,32,29,0.15)] overflow-hidden flex flex-col my-2">
+        
+        {/* Retro Header Bar: CURRICULUM VITAE */}
+        <div className="h-11 bg-[#b8e2d4] border-b-2 border-[#23201d] px-4 flex items-center justify-between shrink-0 font-mono">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-[#f25c38] border border-[#23201d]" />
+            <div className="w-3 h-3 rounded-full bg-[#fdd835] border border-[#23201d]" />
+            <div className="w-3 h-3 rounded-full bg-[#22c55e] border border-[#23201d]" />
           </div>
 
-          {/* Profile Header Details */}
-          <div className="flex-1 text-center md:text-left space-y-2">
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-              <h1 className="text-3xl font-bold text-white tracking-tight">
+          <span className="font-black text-xs md:text-sm tracking-widest text-[#1e1b18] uppercase">
+            CURRICULUM VITAE
+          </span>
+
+          <div className="flex items-center gap-2 text-xs font-bold text-[#1e1b18]">
+            <span>_</span>
+            <span>🗖</span>
+            <span>✕</span>
+          </div>
+        </div>
+
+        {/* Inner Main CV Dashboard */}
+        <div className="p-4 sm:p-6 space-y-5 text-left">
+          
+          {/* Top Profile Card (Sage Green Theme - #a3d9c9) */}
+          <div className="relative bg-[#a3d9c9] border-2 border-[#23201d] rounded-2xl p-4 sm:p-6 shadow-[4px_4px_0px_#23201d] flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden">
+            
+            {/* Floating Left Graphic Tool Palette */}
+            <div className="hidden lg:flex flex-col gap-2 p-2 bg-[#f5ede0] border-2 border-[#23201d] rounded-xl shadow-[3px_3px_0px_#23201d] absolute left-3 top-1/2 -translate-y-1/2 z-20">
+              <button className="p-1 rounded hover:bg-[#a3d9c9] border border-transparent hover:border-[#23201d]" title="Pointer"><MousePointer size={14} /></button>
+              <button className="p-1 rounded hover:bg-[#a3d9c9] border border-transparent hover:border-[#23201d]" title="Bucket"><PaintBucket size={14} /></button>
+              <button className="p-1 rounded hover:bg-[#a3d9c9] border border-transparent hover:border-[#23201d]" title="Text"><Type size={14} /></button>
+              <button className="p-1 rounded hover:bg-[#a3d9c9] border border-transparent hover:border-[#23201d]" title="Search"><Search size={14} /></button>
+              <button className="p-1 rounded hover:bg-[#a3d9c9] border border-transparent hover:border-[#23201d]" title="Layers"><Layers size={14} /></button>
+            </div>
+
+            {/* Profile Info Details */}
+            <div className="space-y-2 lg:pl-14 flex-1">
+              <h1 className="text-2xl sm:text-4xl font-black text-[#1e1b18] tracking-tight uppercase">
                 {MAYURESH_PROFILE.name}
               </h1>
-              <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-xs font-mono">
-                Full Stack Engineer
+              <p className="text-xs sm:text-sm font-extrabold text-[#23201d] uppercase tracking-wide">
+                {MAYURESH_PROFILE.title}
+              </p>
+
+              <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs font-semibold text-[#3a352e]">
+                <div className="flex items-center gap-1.5">
+                  <MapPin size={14} className="text-[#f25c38]" />
+                  <span>{MAYURESH_PROFILE.location}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Mail size={14} className="text-[#f25c38]" />
+                  <a href={`mailto:${MAYURESH_PROFILE.email}`} className="hover:underline">{MAYURESH_PROFILE.email}</a>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Github size={14} className="text-[#1e1b18]" />
+                  <a href={MAYURESH_PROFILE.github} target="_blank" rel="noreferrer" className="hover:underline">github.com/mindfoldz0-spec</a>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Linkedin size={14} className="text-[#0284c7]" />
+                  <a href={MAYURESH_PROFILE.linkedin} target="_blank" rel="noreferrer" className="hover:underline">linkedin/mayuresh-samel</a>
+                </div>
+              </div>
+            </div>
+
+            {/* Circular Portrait Badge Frame */}
+            <div className="relative shrink-0">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-[#23201d] bg-[#f5ede0] shadow-[4px_4px_0px_#23201d] overflow-hidden flex items-center justify-center">
+                <img
+                  src={`${basePath}/mayuresh.png`}
+                  alt="Mayuresh Samel"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <span className="absolute -top-1 -right-1 p-1 rounded-full bg-[#f25c38] border-2 border-[#23201d] text-white" title="Verified Creator">
+                <Sparkles size={14} />
               </span>
             </div>
-            <p className="text-slate-300 text-sm md:text-base font-medium">
-              {MAYURESH_PROFILE.title}
-            </p>
-            <p className="text-slate-400 text-xs flex items-center justify-center md:justify-start gap-1">
-              <MapPin size={14} className="text-cyan-400" />
-              {MAYURESH_PROFILE.location} • Available for contract & full-time roles
-            </p>
-
-            {/* Quick Action Buttons */}
-            <div className="pt-3 flex flex-wrap items-center justify-center md:justify-start gap-3">
-              <button
-                onClick={() => openWindow('contact')}
-                className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-xs transition-all flex items-center gap-2 shadow-lg shadow-cyan-500/25"
-              >
-                <Mail size={16} />
-                <span>Contact Mayuresh</span>
-              </button>
-
-              <button
-                onClick={() => openWindow('projects')}
-                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs border border-white/15 transition-all flex items-center gap-2"
-              >
-                <Briefcase size={16} />
-                <span>View Projects</span>
-              </button>
-
-              <a
-                href={MAYURESH_PROFILE.resumeUrl}
-                download
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-all flex items-center gap-2"
-              >
-                <Download size={16} />
-                <span>Download Resume</span>
-              </a>
-            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Quick Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {MAYURESH_PROFILE.stats.map((stat, i) => (
-          <div
-            key={i}
-            className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center shadow-md"
-          >
-            <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-              {stat.value}
-            </div>
-            <div className="text-xs text-slate-400 mt-1 font-medium">{stat.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Biography & Philosophy */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Bio Left Column */}
-        <div className="md:col-span-2 space-y-4">
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-            <h3 className="text-sm font-semibold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
-              <Sparkles size={16} />
-              About Me
-            </h3>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              {MAYURESH_PROFILE.bio}
-            </p>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              I specialize in combining strong software engineering principles with fluid visual aesthetics. Whether building distributed microservices, WebGL interactive graphics, or real-time web applications, I focus on sub-second responsiveness, accessibility, and high code quality.
-            </p>
-          </div>
-        </div>
-
-        {/* Social Links Right Column */}
-        <div className="space-y-4">
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
-            <h3 className="text-sm font-semibold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
-              <Code2 size={16} />
-              Connect & Socials
-            </h3>
-
-            <div className="space-y-2">
-              <a
-                href={MAYURESH_PROFILE.github}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 flex items-center justify-between text-xs text-slate-200 transition-all group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Github size={16} className="text-cyan-400" />
-                  <span>GitHub Profile</span>
+          {/* Lower Grid Layout: Skills + Education (Left 6 cols) & Experience + Reference (Right 6 cols) */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+            
+            {/* Left Column: Skills Card & Education Card */}
+            <div className="md:col-span-6 space-y-5">
+              
+              {/* Skills Rating Card (#fbf7f0 Cream) */}
+              <div className="bg-[#fbf7f0] border-2 border-[#23201d] rounded-2xl p-4 sm:p-5 shadow-[4px_4px_0px_#23201d] space-y-3">
+                <div className="flex items-center justify-between border-b-2 border-[#23201d]/10 pb-2">
+                  <h3 className="font-extrabold text-xs text-[#1e1b18] uppercase tracking-wider">
+                    TECHNICAL SKILLS
+                  </h3>
+                  <Pencil size={14} className="text-[#6e675f]" />
                 </div>
-                <ExternalLink size={14} className="text-slate-500 group-hover:text-cyan-400" />
-              </a>
 
-              <a
-                href={MAYURESH_PROFILE.linkedin}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 flex items-center justify-between text-xs text-slate-200 transition-all group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Linkedin size={16} className="text-blue-400" />
-                  <span>LinkedIn Network</span>
+                <div className="space-y-2.5 text-xs font-bold">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#3a352e]">Full Stack Web Architecture</span>
+                    <span className="text-[#15803d] font-mono tracking-widest">•••••</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#3a352e]">React & Next.js Framework</span>
+                    <span className="text-[#15803d] font-mono tracking-widest">•••••</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#3a352e]">Web Game Engine Development</span>
+                    <span className="text-[#15803d] font-mono tracking-widest">•••••</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#3a352e]">TypeScript & Node.js Backend</span>
+                    <span className="text-[#15803d] font-mono tracking-widest">•••••</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#3a352e]">Glassmorphism & Windows UI</span>
+                    <span className="text-[#15803d] font-mono tracking-widest">•••••</span>
+                  </div>
                 </div>
-                <ExternalLink size={14} className="text-slate-500 group-hover:text-blue-400" />
-              </a>
+              </div>
 
-              <a
-                href={MAYURESH_PROFILE.twitter}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 flex items-center justify-between text-xs text-slate-200 transition-all group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Twitter size={16} className="text-sky-400" />
-                  <span>Twitter / X</span>
+              {/* Education Carousel Card (#b8e2d4 Sage Green) */}
+              <div className="bg-[#b8e2d4] border-2 border-[#23201d] rounded-2xl p-4 shadow-[4px_4px_0px_#23201d] space-y-3">
+                <div className="flex items-center justify-between border-b-2 border-[#23201d] pb-2">
+                  <button
+                    onClick={() => setActiveEducationIndex((prev) => (prev > 0 ? prev - 1 : educationList.length - 1))}
+                    className="p-1 rounded hover:bg-[#a8dacb] border border-[#23201d]"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  
+                  <span className="font-extrabold text-xs text-[#1e1b18] uppercase tracking-wider flex items-center gap-1.5">
+                    <GraduationCap size={16} />
+                    <span>EDUCATION & DIPLOMA</span>
+                  </span>
+
+                  <button
+                    onClick={() => setActiveEducationIndex((prev) => (prev < educationList.length - 1 ? prev + 1 : 0))}
+                    className="p-1 rounded hover:bg-[#a8dacb] border border-[#23201d]"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
                 </div>
-                <ExternalLink size={14} className="text-slate-500 group-hover:text-sky-400" />
-              </a>
+
+                <div className="text-left space-y-1">
+                  <h4 className="font-black text-xs text-[#1e1b18]">
+                    {educationList[activeEducationIndex].title}
+                  </h4>
+                  <p className="text-[11px] font-bold text-[#226d56]">
+                    {educationList[activeEducationIndex].institution}
+                  </p>
+                  <p className="text-[11px] text-[#3a352e] pt-1 leading-relaxed">
+                    {educationList[activeEducationIndex].desc}
+                  </p>
+                </div>
+              </div>
+
             </div>
+
+            {/* Right Column: Experiences Card & References */}
+            <div className="md:col-span-6 space-y-5">
+              
+              {/* Experiences Window Card (#f0d697 Warm Sand) */}
+              <div className="bg-[#f0d697] border-2 border-[#23201d] rounded-2xl p-4 sm:p-5 shadow-[4px_4px_0px_#23201d] space-y-4">
+                <div className="flex items-center justify-between border-b-2 border-[#23201d] pb-2 font-mono">
+                  <span className="font-black text-xs text-[#1e1b18] uppercase tracking-wider flex items-center gap-1.5">
+                    <Briefcase size={15} />
+                    <span>EXPERIENCES</span>
+                  </span>
+                  <div className="flex gap-1 text-[10px] font-bold text-[#1e1b18]">
+                    <span>_</span>
+                    <span>🗖</span>
+                    <span>✕</span>
+                  </div>
+                </div>
+
+                {/* Experience Item 1 */}
+                <div className="space-y-1 text-left border-b border-[#23201d]/20 pb-3">
+                  <h4 className="font-extrabold text-xs text-[#1e1b18]">Senior Full Stack Software Engineer</h4>
+                  <p className="text-[11px] font-mono font-bold text-[#855305]">
+                    Mayuresh Digital Studio | 2023 - Present
+                  </p>
+                  <ul className="text-[11px] text-[#3a352e] pt-1 space-y-1 list-disc list-inside leading-normal">
+                    <li>Engineering high-performance Next.js 14 applications, AI voice models, and desktop simulators.</li>
+                    <li>Designing responsive glassmorphic UI systems and REST/GraphQL API proxies.</li>
+                  </ul>
+                </div>
+
+                {/* Experience Item 2 */}
+                <div className="space-y-1 text-left">
+                  <h4 className="font-extrabold text-xs text-[#1e1b18]">Web Game Engine & UI Developer</h4>
+                  <p className="text-[11px] font-mono font-bold text-[#855305]">
+                    3rd Year Diploma Milestone | 2022 - 2023
+                  </p>
+                  <ul className="text-[11px] text-[#3a352e] pt-1 space-y-1 list-disc list-inside leading-normal">
+                    <li>Developed Lost Dune 2D HTML5 canvas engine with custom AABB physics and touch controls.</li>
+                    <li>Crafted Windows 11 desktop environment simulator portfolio.</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Reference & Contact Card (#fbf7f0 Cream) */}
+              <div className="bg-[#fbf7f0] border-2 border-[#23201d] rounded-2xl p-4 shadow-[4px_4px_0px_#23201d] space-y-2 text-left">
+                <h4 className="font-extrabold text-xs text-[#1e1b18] uppercase tracking-wider">
+                  REFERENCE & AVAILABILITY
+                </h4>
+                <p className="text-xs font-bold text-[#1e1b18]">
+                  Mayuresh Samel — Full Stack Software Engineer
+                </p>
+                <p className="text-[11px] text-[#5c5449]">
+                  Available for Full-Time Roles, Technical Lead Consultations, and High-Impact Software Engineering.
+                </p>
+                <div className="pt-2 flex gap-2">
+                  <button
+                    onClick={() => openWindow('contact')}
+                    className="px-3 py-1.5 rounded-xl bg-[#f25c38] text-white font-extrabold text-xs border-2 border-[#23201d] shadow-[2px_2px_0px_#23201d] hover:bg-[#d94827] transition-all active:scale-95 flex items-center gap-1.5"
+                  >
+                    <Mail size={14} />
+                    <span>Contact Mayuresh</span>
+                  </button>
+
+                  <button
+                    onClick={() => openWindow('projects')}
+                    className="px-3 py-1.5 rounded-xl bg-[#f5ede0] text-[#1e1b18] font-extrabold text-xs border-2 border-[#23201d] shadow-[2px_2px_0px_#23201d] hover:bg-white transition-all active:scale-95 flex items-center gap-1.5"
+                  >
+                    <Briefcase size={14} />
+                    <span>View Projects</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
           </div>
+
         </div>
+
       </div>
     </div>
   );

@@ -78,8 +78,8 @@ export const APPS_CONFIG: AppMetadata[] = [
     category: 'utility',
     isPinnedToTaskbar: false,
     isDesktopShortcut: true,
-    defaultWidth: 800,
-    defaultHeight: 560,
+    defaultWidth: 600,
+    defaultHeight: 550,
   },
   {
     id: 'linkedin',
@@ -112,13 +112,13 @@ export const APPS_CONFIG: AppMetadata[] = [
     defaultHeight: 520,
   },
   {
-    id: 'calculator',
+    id: 'calendar',
     title: 'Calendar',
-    iconName: 'Calculator',
+    iconName: 'Calendar',
     category: 'utility',
     isPinnedToTaskbar: false,
     isDesktopShortcut: true,
-    defaultWidth: 440,
+    defaultWidth: 700,
     defaultHeight: 580,
   },
   {
@@ -140,5 +140,15 @@ export const APPS_CONFIG: AppMetadata[] = [
     isDesktopShortcut: true,
     defaultWidth: 800,
     defaultHeight: 500,
+  },
+  {
+    id: 'recycle-bin',
+    title: 'Recycle Bin',
+    iconName: 'Trash2',
+    category: 'system',
+    isPinnedToTaskbar: false,
+    isDesktopShortcut: true,
+    defaultWidth: 700,
+    defaultHeight: 520,
   },
 ];

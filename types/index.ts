@@ -8,7 +8,7 @@ export type AppId =
   | 'contact'
   | 'explorer'
   | 'notepad'
-  | 'calculator'
+  | 'calendar'
   | 'settings'
   | 'terminal'
   | 'browser'

@@ -28,8 +28,8 @@ const initialWindows: Record<AppId, WindowState> = APPS_CONFIG.reduce((acc, app,
     zIndex: 10,
     position: { x: 100 + (index % 4) * 30, y: 80 + (index % 4) * 20 },
     size: {
-      width: app.defaultWidth || (app.id === 'calculator' ? 440 : 800),
-      height: app.defaultHeight || (app.id === 'calculator' ? 560 : 600),
+      width: app.defaultWidth || (app.id === 'calendar' ? 700 : 800),
+      height: app.defaultHeight || (app.id === 'calendar' ? 580 : 600),
     },
   };
   return acc;
@@ -58,18 +58,24 @@ export const useWindowStore = create<WindowStoreState>((set, get) => ({
     const target = windows[id];
     if (!target) return;
 
-    const newZ = maxZIndex + 1;
+    let newZ = maxZIndex + 1;
+    if (newZ > 1000) {
+      newZ = 100;
+    }
 
     // Calculate exact viewport center position so windows open in the middle of the screen!
     let centeredPos = target.position;
     if (typeof window !== 'undefined') {
       const screenWidth = window.innerWidth;
       const screenHeight = window.innerHeight - 56;
-      const winWidth = id === 'calculator' ? 440 : target.size.width || 800;
-      const winHeight = id === 'calculator' ? 560 : target.size.height || 600;
+      const winWidth = id === 'calendar' ? 700 : target.size.width || 800;
+      const winHeight = id === 'calendar' ? 580 : target.size.height || 600;
 
-      const centerX = Math.max(20, Math.floor((screenWidth - winWidth) / 2));
-      const centerY = Math.max(20, Math.floor((screenHeight - winHeight) / 2));
+      const maxX = Math.max(10, screenWidth - winWidth - 10);
+      const maxY = Math.max(10, screenHeight - winHeight - 10);
+
+      const centerX = Math.max(10, Math.min(maxX, Math.floor((screenWidth - winWidth) / 2)));
+      const centerY = Math.max(10, Math.min(maxY, Math.floor((screenHeight - winHeight) / 2)));
       centeredPos = { x: centerX, y: centerY };
     }
 

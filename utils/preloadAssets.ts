@@ -31,29 +31,16 @@ const getFullPath = (path: string): string => {
 export const getAllPreloadUrls = (): string[] => {
   const urls: string[] = [];
 
-  // 1. Icons
+  // 1. App Icons
   LOCAL_ICONS.forEach((path) => {
     if (path) urls.push(getFullPath(path));
   });
 
-  // 2. Wallpapers
-  LOCAL_WALLPAPERS.forEach((path) => {
-    if (path) urls.push(getFullPath(path));
-  });
-
-  // 3. Profile photo
+  // 2. Main Profile photo & loading icon
   PROFILE_PHOTOS.forEach((path) => {
     if (path) urls.push(getFullPath(path));
   });
-
-  // 4. Projects & Photos media
-  PROJECTS.forEach((p) => {
-    if (p.imageUrl) urls.push(getFullPath(p.imageUrl));
-  });
-
-  PHOTOS.forEach((ph) => {
-    if (ph.url) urls.push(getFullPath(ph.url));
-  });
+  urls.push(getFullPath('/loadingportfolioicon.png'));
 
   // Remove duplicates
   return Array.from(new Set(urls));

@@ -51,7 +51,7 @@ const INITIAL_EVENTS: CalendarEvent[] = [
 
 export const CalendarApp: React.FC = () => {
   const { minimizeWindow, maximizeWindow, closeWindow, windows } = useWindowStore();
-  const isMaximized = windows['calculator']?.isMaximized || false;
+  const isMaximized = windows['calendar']?.isMaximized || false;
 
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -136,7 +136,7 @@ export const CalendarApp: React.FC = () => {
       <div className="flex items-center justify-between gap-2 mb-6 cursor-move select-none">
         {/* Top Left: App Icon & Title */}
         <div className="flex items-center gap-2">
-          <AppIcon id="calculator" size={20} />
+          <AppIcon id="calendar" size={20} />
           <span className="text-xs font-semibold text-white/90 tracking-wide">Calendar</span>
         </div>
 
@@ -189,14 +189,14 @@ export const CalendarApp: React.FC = () => {
             {/* Window Controls (Minimize & Close only) */}
             <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
               <button
-                onClick={() => minimizeWindow('calculator')}
+                onClick={() => minimizeWindow('calendar')}
                 className="w-8 h-8 rounded-lg hover:bg-white/15 flex items-center justify-center text-white/80 hover:text-white transition-colors"
                 title="Minimize"
               >
                 <Minus size={14} />
               </button>
               <button
-                onClick={() => closeWindow('calculator')}
+                onClick={() => closeWindow('calendar')}
                 className="w-8 h-8 rounded-lg hover:bg-red-500/80 flex items-center justify-center text-white/80 hover:text-white transition-colors"
                 title="Close"
               >
