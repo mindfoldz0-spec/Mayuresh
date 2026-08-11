@@ -313,6 +313,13 @@ export const FILE_SYSTEM: FileExplorerItem[] = [
 
 export const WALLPAPERS: WallpaperOption[] = [
   {
+    id: 'wall-windowsxp',
+    name: 'Windows XP Bliss',
+    type: 'image',
+    value: "url('/wallpapers/windows-xp.jpg')",
+    thumbnail: "url('/wallpapers/windows-xp.jpg')",
+  },
+  {
     id: 'wall-windows11',
     name: 'Windows 11 Official',
     type: 'image',
@@ -367,13 +374,6 @@ export const WALLPAPERS: WallpaperOption[] = [
     type: 'image',
     value: "url('/wallpapers/bugatti.jpg')",
     thumbnail: "url('/wallpapers/bugatti.jpg')",
-  },
-  {
-    id: 'wall-windowsxp',
-    name: 'Windows XP Bliss',
-    type: 'image',
-    value: "url('/wallpapers/windows-xp.jpg')",
-    thumbnail: "url('/wallpapers/windows-xp.jpg')",
   },
 ];
 

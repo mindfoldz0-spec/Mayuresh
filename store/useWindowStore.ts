@@ -18,10 +18,6 @@ interface WindowStoreState {
 }
 
 const initialWindows: Record<AppId, WindowState> = APPS_CONFIG.reduce((acc, app, index) => {
-  // Offset windows slightly when opening
-  const xOffset = 80 + (index % 5) * 30;
-  const yOffset = 50 + (index % 5) * 25;
-
   acc[app.id] = {
     id: app.id,
     title: app.title,
@@ -30,10 +26,10 @@ const initialWindows: Record<AppId, WindowState> = APPS_CONFIG.reduce((acc, app,
     isMinimized: false,
     isMaximized: false,
     zIndex: 10,
-    position: { x: xOffset, y: yOffset },
+    position: { x: 100 + (index % 4) * 30, y: 80 + (index % 4) * 20 },
     size: {
-      width: app.defaultWidth || 800,
-      height: app.defaultHeight || 600,
+      width: app.defaultWidth || (app.id === 'calculator' ? 440 : 800),
+      height: app.defaultHeight || (app.id === 'calculator' ? 560 : 600),
     },
   };
   return acc;
@@ -64,6 +60,19 @@ export const useWindowStore = create<WindowStoreState>((set, get) => ({
 
     const newZ = maxZIndex + 1;
 
+    // Calculate exact viewport center position so windows open in the middle of the screen!
+    let centeredPos = target.position;
+    if (typeof window !== 'undefined') {
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight - 56;
+      const winWidth = id === 'calculator' ? 440 : target.size.width || 800;
+      const winHeight = id === 'calculator' ? 560 : target.size.height || 600;
+
+      const centerX = Math.max(20, Math.floor((screenWidth - winWidth) / 2));
+      const centerY = Math.max(20, Math.floor((screenHeight - winHeight) / 2));
+      centeredPos = { x: centerX, y: centerY };
+    }
+
     set({
       windows: {
         ...windows,
@@ -72,6 +81,7 @@ export const useWindowStore = create<WindowStoreState>((set, get) => ({
           isOpen: true,
           isMinimized: false,
           zIndex: newZ,
+          position: centeredPos,
         },
       },
       activeWindowId: id,

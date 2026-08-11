@@ -1,10 +1,25 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { WALLPAPERS } from '../../data/portfolio';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useSystemStore } from '../../store/useSystemStore';
-import { Settings, Image, Sun, Moon, Volume2, Sparkles, RefreshCcw, Check } from 'lucide-react';
+import { useWindowStore } from '../../store/useWindowStore';
+import { AppIcon } from '../common/AppIcon';
+import {
+  Settings,
+  Image as ImageIcon,
+  Sun,
+  Moon,
+  Sparkles,
+  RefreshCcw,
+  Check,
+  Minus,
+  X,
+  Play,
+  Monitor,
+  CheckCircle2,
+} from 'lucide-react';
 
 export const SettingsApp: React.FC = () => {
   const {
@@ -12,183 +27,344 @@ export const SettingsApp: React.FC = () => {
     setWallpaper,
     theme,
     setTheme,
-    toggleTheme,
     animationsEnabled,
     toggleAnimations,
-    soundEnabled,
-    toggleSound,
     resetSettings,
   } = useSettingsStore();
 
   const { addNotification, restartBootSequence } = useSystemStore();
+  const { minimizeWindow, closeWindow } = useWindowStore();
+
+  const [activeTab, setActiveTab] = useState<'wallpapers' | 'appearance' | 'system'>('wallpapers');
+
+  // Currently active wallpaper item
+  const activeWallpaper = WALLPAPERS.find((w) => w.id === wallpaperId) || WALLPAPERS[0];
+
+  const getCleanUrl = (urlStr: string) => {
+    const match = urlStr.match(/url\(['"]?([^'"]+)['"]?\)/);
+    const rawUrl = match ? match[1] : urlStr;
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+    const cleanPath = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
+    return rawUrl.startsWith('http') ? rawUrl : `${basePath}${cleanPath}`;
+  };
+
+  const activeHeroUrl = getCleanUrl(activeWallpaper.thumbnail);
 
   return (
-    <div className="p-6 space-y-8 select-text font-sans">
-      {/* Header */}
-      <div className="border-b border-white/10 pb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Settings className="text-cyan-400" size={22} />
-            System Settings & Personalization
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Customize wallpaper, visual themes, sound effects, and desktop performance options.
-          </p>
-        </div>
-
-        <button
-          onClick={() => {
-            resetSettings();
-            addNotification('Settings Reset', 'Desktop configuration restored to defaults.', 'info');
-          }}
-          className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-xs text-slate-300 border border-white/10 flex items-center gap-1.5 transition-colors"
-        >
-          <RefreshCcw size={14} />
-          <span>Reset Defaults</span>
-        </button>
-      </div>
-
-      {/* Wallpaper Personalization Section */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
-          <Image size={16} />
-          Desktop Wallpapers
-        </h3>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          {WALLPAPERS.map((wall) => {
-            const isSelected = wallpaperId === wall.id;
-            const match = wall.thumbnail.match(/url\(['"]?([^'"]+)['"]?\)/);
-            const rawThumbUrl = match ? match[1] : wall.thumbnail;
-            const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-            const cleanPath = rawThumbUrl.startsWith('/') ? rawThumbUrl : `/${rawThumbUrl}`;
-            const thumbUrl = rawThumbUrl.startsWith('http') ? rawThumbUrl : `${basePath}${cleanPath}`;
-
-            return (
-              <button
-                key={wall.id}
-                onClick={() => setWallpaper(wall.id)}
-                className={`relative h-28 rounded-2xl p-3 flex flex-col justify-end text-left border transition-all overflow-hidden group shadow-md ${
-                  isSelected
-                    ? 'border-cyan-400 ring-2 ring-cyan-500/50 scale-105'
-                    : 'border-white/10 hover:border-white/30'
-                }`}
-                style={{
-                  backgroundImage: `url("${thumbUrl}")`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
-              >
-                <img
-                  src={thumbUrl}
-                  alt={wall.name}
-                  className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-300"
-                  onError={(e) => {
-                    // Hide broken img tag so CSS background handles preview smoothly
-                    (e.currentTarget as HTMLElement).style.display = 'none';
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent pointer-events-none" />
-                {isSelected && (
-                  <div className="absolute top-2 right-2 p-1 rounded-full bg-cyan-500 text-slate-950 shadow-md z-10">
-                    <Check size={12} />
-                  </div>
-                )}
-                <span className="text-[11px] font-semibold text-white drop-shadow-md leading-tight relative z-10">
-                  {wall.name}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Visual Theme & Appearance Options */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/10">
-        {/* Theme Mode Card */}
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-white/10 space-y-4 shadow-lg">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-            System Theme
-          </h4>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => setTheme('dark')}
-              className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
-                theme === 'dark'
-                  ? 'border-cyan-400 bg-cyan-500/15 text-white ring-2 ring-cyan-500/40'
-                  : 'border-white/10 bg-slate-950/40 text-slate-400 hover:border-white/20'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Moon size={18} className={theme === 'dark' ? 'text-cyan-400' : 'text-slate-400'} />
-                <span className="text-xs font-semibold">Dark Mode</span>
-              </div>
-              {theme === 'dark' && <Check size={14} className="text-cyan-400" />}
-            </button>
-
-            <button
-              onClick={() => setTheme('light')}
-              className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
-                theme === 'light'
-                  ? 'border-cyan-400 bg-cyan-500/15 text-white ring-2 ring-cyan-500/40'
-                  : 'border-white/10 bg-slate-950/40 text-slate-400 hover:border-white/20'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Sun size={18} className={theme === 'light' ? 'text-amber-400' : 'text-slate-400'} />
-                <span className="text-xs font-semibold">Light Mode</span>
-              </div>
-              {theme === 'light' && <Check size={14} className="text-cyan-400" />}
-            </button>
+    <div
+      className="w-full text-white shadow-2xl relative overflow-hidden flex flex-col justify-between select-none font-sans rounded-[36px] p-7 transition-all"
+      style={{
+        background: 'rgba(38, 52, 42, 0.52)',
+        backdropFilter: 'blur(50px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(50px) saturate(180%)',
+        border: '1px solid rgba(255, 255, 255, 0.25)',
+        boxShadow: '0 30px 60px rgba(0, 0, 0, 0.5), inset 0 1.5px 1px rgba(255, 255, 255, 0.3)',
+      }}
+    >
+      {/* Top Header Row (App Icon, Title, Tab Switcher, Window Controls) */}
+      <div className="flex items-center justify-between gap-4 mb-6 cursor-move select-none border-b border-white/15 pb-4">
+        {/* Top Left: App Icon & Title */}
+        <div className="flex items-center gap-2.5">
+          <AppIcon id="settings" size={22} />
+          <div>
+            <h2 className="text-sm font-bold text-white leading-none tracking-wide">Settings</h2>
+            <span className="text-[10px] text-white/60 font-light">Personalization & Controls</span>
           </div>
         </div>
 
-        {/* Animations Toggle */}
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-white/10 space-y-4 shadow-lg">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-            Motion & Effects
-          </h4>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-300">
-                <Sparkles size={20} />
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-white">Framer Motion Animations</div>
-                <div className="text-[11px] text-slate-400">
-                  {animationsEnabled ? 'Smooth window transitions enabled' : 'Reduced motion'}
+        {/* Center: Segmented Navigation Pills */}
+        <div
+          className="p-1 rounded-2xl flex items-center gap-1"
+          style={{
+            background: 'rgba(255, 255, 255, 0.10)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+          }}
+        >
+          <button
+            onClick={() => setActiveTab('wallpapers')}
+            className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 ${
+              activeTab === 'wallpapers'
+                ? 'bg-white text-slate-900 shadow-md font-bold'
+                : 'text-white/80 hover:text-white'
+            }`}
+          >
+            Wallpapers
+          </button>
+          <button
+            onClick={() => setActiveTab('appearance')}
+            className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 ${
+              activeTab === 'appearance'
+                ? 'bg-white text-slate-900 shadow-md font-bold'
+                : 'text-white/80 hover:text-white'
+            }`}
+          >
+            Appearance
+          </button>
+          <button
+            onClick={() => setActiveTab('system')}
+            className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 ${
+              activeTab === 'system'
+                ? 'bg-white text-slate-900 shadow-md font-bold'
+                : 'text-white/80 hover:text-white'
+            }`}
+          >
+            System
+          </button>
+        </div>
+
+        {/* Top Right: Reset & Window Controls (Minimize & Close only) */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              resetSettings();
+              addNotification('Settings Reset', 'Desktop configuration restored to defaults.', 'info');
+            }}
+            className="px-3 py-1.5 rounded-xl text-xs text-white/80 hover:text-white flex items-center gap-1.5 transition-all active:scale-95"
+            style={{
+              background: 'rgba(255, 255, 255, 0.12)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
+              backdropFilter: 'blur(12px)',
+            }}
+            title="Reset Settings"
+          >
+            <RefreshCcw size={13} />
+            <span className="hidden sm:inline">Reset</span>
+          </button>
+
+          {/* Window Controls */}
+          <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => minimizeWindow('settings')}
+              className="w-8 h-8 rounded-lg hover:bg-white/15 flex items-center justify-center text-white/80 hover:text-white transition-colors"
+              title="Minimize"
+            >
+              <Minus size={14} />
+            </button>
+            <button
+              onClick={() => closeWindow('settings')}
+              className="w-8 h-8 rounded-lg hover:bg-red-500/80 flex items-center justify-center text-white/80 hover:text-white transition-colors"
+              title="Close"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Body */}
+      <div className="space-y-5 my-1 min-h-[380px]">
+        {activeTab === 'wallpapers' && (
+          <div className="space-y-4">
+            {/* Live Active Desktop Preview Showcase Header */}
+            <div
+              className="relative h-36 rounded-2xl overflow-hidden border border-white/25 shadow-xl flex items-end p-4 group"
+              style={{
+                backgroundImage: `url("${activeHeroUrl}")`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
+
+              {/* Monitor Outline Graphic Badge */}
+              <div className="relative z-10 flex items-center justify-between w-full">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white">
+                    <Monitor size={18} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 font-semibold flex items-center gap-1">
+                      <CheckCircle2 size={11} /> Active Desktop Wallpaper
+                    </span>
+                    <h3 className="text-base font-bold text-white drop-shadow-md">
+                      {activeWallpaper.name}
+                    </h3>
+                  </div>
                 </div>
+
+                <span className="px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-[10px] font-mono text-white/90">
+                  4K Ultra HD
+                </span>
               </div>
             </div>
 
-            <button
-              onClick={toggleAnimations}
-              className={`px-4 py-2 rounded-xl font-semibold text-xs transition-all ${
-                animationsEnabled
-                  ? 'bg-cyan-500 text-slate-950'
-                  : 'bg-white/10 text-slate-300 border border-white/15'
-              }`}
-            >
-              {animationsEnabled ? 'Enabled' : 'Disabled'}
-            </button>
+            {/* Wallpaper Grid Showcase (Padded to prevent card selection clipping) */}
+            <div>
+              <div className="flex items-center justify-between mb-2 px-1">
+                <span className="text-xs font-semibold text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                  <ImageIcon size={14} className="text-emerald-400" />
+                  Select Wallpaper ({WALLPAPERS.length})
+                </span>
+                <span className="text-[10px] text-white/50">Click to apply instantly</span>
+              </div>
+
+              {/* Added container padding (p-2) to avoid scale clipping */}
+              <div className="grid grid-cols-3 gap-4 max-h-[230px] overflow-y-auto p-2 pr-2 custom-scrollbar">
+                {WALLPAPERS.map((wall) => {
+                  const isSelected = wallpaperId === wall.id;
+                  const thumbUrl = getCleanUrl(wall.thumbnail);
+
+                  return (
+                    <button
+                      key={wall.id}
+                      onClick={() => setWallpaper(wall.id)}
+                      className={`relative h-24 rounded-2xl p-3 flex flex-col justify-end text-left transition-all overflow-hidden group ${
+                        isSelected
+                          ? 'border-2 border-white shadow-[0_0_20px_rgba(255,255,255,0.4)]'
+                          : 'border border-white/20 hover:border-white/40'
+                      }`}
+                      style={{
+                        backgroundImage: `url("${thumbUrl}")`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }}
+                    >
+                      <img
+                        src={thumbUrl}
+                        alt={wall.name}
+                        className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
+
+                      {isSelected && (
+                        <div className="absolute top-2.5 right-2.5 p-1 rounded-full bg-white text-slate-950 shadow-lg z-10 font-bold">
+                          <Check size={12} />
+                        </div>
+                      )}
+
+                      <span className="text-xs font-semibold text-white drop-shadow-md leading-tight relative z-10 line-clamp-1">
+                        {wall.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {activeTab === 'appearance' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* System Theme Card */}
+            <div
+              className="p-5 rounded-2xl space-y-4"
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                backdropFilter: 'blur(15px)',
+              }}
+            >
+              <h4 className="text-xs font-bold text-white/80 uppercase tracking-wider flex items-center gap-2">
+                <Sun size={15} className="text-amber-400" />
+                Color Theme
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setTheme('dark')}
+                  className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                    theme === 'dark'
+                      ? 'bg-white text-slate-950 font-bold border-white shadow-md'
+                      : 'bg-black/30 text-white/80 border-white/15 hover:border-white/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Moon size={16} />
+                    <span className="text-xs">Dark Mode</span>
+                  </div>
+                  {theme === 'dark' && <Check size={14} />}
+                </button>
+
+                <button
+                  onClick={() => setTheme('light')}
+                  className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                    theme === 'light'
+                      ? 'bg-white text-slate-950 font-bold border-white shadow-md'
+                      : 'bg-black/30 text-white/80 border-white/15 hover:border-white/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Sun size={16} />
+                    <span className="text-xs">Light Mode</span>
+                  </div>
+                  {theme === 'light' && <Check size={14} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Motion & Animations Card */}
+            <div
+              className="p-5 rounded-2xl space-y-4"
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                backdropFilter: 'blur(15px)',
+              }}
+            >
+              <h4 className="text-xs font-bold text-white/80 uppercase tracking-wider flex items-center gap-2">
+                <Sparkles size={15} className="text-emerald-400" />
+                Motion Effects
+              </h4>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-semibold text-white">Framer Motion</div>
+                  <div className="text-[11px] text-white/60">
+                    {animationsEnabled ? 'Fluid transitions active' : 'Reduced motion mode'}
+                  </div>
+                </div>
+
+                <button
+                  onClick={toggleAnimations}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    animationsEnabled
+                      ? 'bg-white text-slate-950 shadow-md'
+                      : 'bg-black/30 text-white/70 border border-white/15'
+                  }`}
+                >
+                  {animationsEnabled ? 'Enabled' : 'Disabled'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'system' && (
+          <div className="space-y-4">
+            <div
+              className="p-5 rounded-2xl flex items-center justify-between"
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                backdropFilter: 'blur(15px)',
+              }}
+            >
+              <div>
+                <div className="text-xs font-bold text-white flex items-center gap-2">
+                  <Play size={15} className="text-red-400" />
+                  Re-run Boot & Loader Experience
+                </div>
+                <div className="text-[11px] text-white/60 mt-0.5">
+                  Re-trigger the Windows boot screen and lock screen.
+                </div>
+              </div>
+              <button
+                onClick={restartBootSequence}
+                className="px-4 py-2 rounded-xl bg-white text-slate-950 font-bold text-xs hover:bg-white/90 shadow-md transition-all active:scale-95"
+              >
+                Run Boot
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Boot Loader Action */}
-      <div className="p-5 rounded-2xl bg-slate-900/60 border border-white/10 flex items-center justify-between">
-        <div>
-          <div className="text-xs font-bold text-white">Re-run Boot & Loader Experience</div>
-          <div className="text-[11px] text-slate-400">
-            Re-trigger the 4-stage Windows boot screen and lock screen.
-          </div>
-        </div>
-        <button
-          onClick={restartBootSequence}
-          className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-white border border-slate-700 font-semibold transition-colors"
-        >
-          Run Boot Sequence
-        </button>
+      {/* Bottom Footer Note */}
+      <div className="pt-3 border-t border-white/15 flex items-center justify-between text-[11px] text-white/60 font-mono">
+        <span>Windows OS Portfolio v1.0</span>
+        <span>Made with Next.js & Tailwind</span>
       </div>
     </div>
   );

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Voice Diagnostic Test</title>
+  <style>
+    body { font-family: system-ui; max-width: 600px; margin: 40px auto; padding: 20px; background: #0f172a; color: #e2e8f0; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin: 12px 0; }
+    .pass { border-left: 4px solid #22c55e; }
+    .fail { border-left: 4px solid #ef4444; }
+    .warn { border-left: 4px solid #f59e0b; }
+    .info { border-left: 4px solid #3b82f6; }
+    h1 { color: #f8fafc; }
+    h3 { margin: 0 0 8px; color: #94a3b8; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+    p { margin: 4px 0; font-size: 14px; }
+    button { background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin: 8px 4px; }
+    button:hover { background: #2563eb; }
+    button:disabled { background: #475569; cursor: not-allowed; }
+    #log { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; }
+    .timestamp { color: #64748b; }
+    .success { color: #22c55e; }
+    .error { color: #ef4444; }
+    .warning { color: #f59e0b; }
+  </style>
+</head>
+<body>
+  <h1>🎤 Voice Diagnostic Test</h1>
+  <p style="color:#94a3b8">This page tests every component of speech recognition on your browser.</p>
+
+  <div id="results"></div>
+
+  <div style="margin: 20px 0">
+    <button id="btnMic" onclick="testMicrophone()">🎤 Test Microphone</button>
+    <button id="btnSTT" onclick="testSTT()">🗣️ Test Speech-to-Text</button>
+    <button id="btnAll" onclick="runAllTests()">🔬 Run All Tests</button>
+  </div>
+
+  <h3 style="margin-top:24px">Live Log</h3>
+  <div id="log"></div>
+
+  <script>
+    const results = document.getElementById('results');
+    const log = document.getElementById('log');
+
+    function addLog(msg, type = 'info') {
+      const time = new Date().toLocaleTimeString();
+      const colorClass = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : '';
+      log.innerHTML += `<span class="timestamp">[${time}]</span> <span class="${colorClass}">${msg}</span>\n`;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function addResult(title, message, status) {
+      const card = document.createElement('div');
+      card.className = `card ${status}`;
+      card.innerHTML = `<h3>${title}</h3><p>${message}</p>`;
+      results.appendChild(card);
+    }
+
+    function clearResults() {
+      results.innerHTML = '';
+      log.innerHTML = '';
+    }
+
+    async function testBrowserSupport() {
+      addLog('Testing browser support...', 'info');
+
+      // Browser info
+      const ua = navigator.userAgent;
+      let browser = 'Unknown';
+      if (ua.includes('Edg/')) browser = 'Microsoft Edge';
+      else if (ua.includes('Chrome/')) browser = 'Google Chrome';
+      else if (ua.includes('Firefox/')) browser = 'Firefox';
+      else if (ua.includes('Safari/')) browser = 'Safari';
+
+      addResult('Browser', `${browser}<br><small style="color:#64748b">${ua.substring(0, 100)}...</small>`, 'info');
+      addLog(`Browser: ${browser}`, 'info');
+
+      // HTTPS check
+      const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      if (isSecure) {
+        addResult('Protocol', `${location.protocol}//${location.hostname} ✅ Speech Recognition works on localhost and HTTPS`, 'pass');
+        addLog(`Protocol: ${location.protocol}//${location.hostname} - OK`, 'success');
+      } else {
+        addResult('Protocol', `${location.protocol}//${location.hostname} ❌ Speech Recognition requires HTTPS or localhost!`, 'fail');
+        addLog(`Protocol: ${location.protocol}//${location.hostname} - BLOCKED! Need HTTPS or localhost`, 'error');
+      }
+
+      // SpeechRecognition API check
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SR) {
+        addResult('SpeechRecognition API', '✅ Available in this browser', 'pass');
+        addLog('SpeechRecognition API: Available', 'success');
+      } else {
+        addResult('SpeechRecognition API', '❌ NOT available! This browser does not support Web Speech API. Use Chrome or Edge.', 'fail');
+        addLog('SpeechRecognition API: NOT AVAILABLE - use Chrome or Edge!', 'error');
+      }
+
+      // MediaDevices API check
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        addResult('MediaDevices API', '✅ getUserMedia available', 'pass');
+        addLog('MediaDevices API: Available', 'success');
+      } else {
+        addResult('MediaDevices API', '❌ getUserMedia NOT available', 'fail');
+        addLog('MediaDevices API: NOT AVAILABLE', 'error');
+      }
+
+      return { browser, isSecure, hasSR: !!SR };
+    }
+
+    async function testMicrophone() {
+      addLog('--- MICROPHONE TEST ---', 'info');
+      addLog('Requesting microphone permission...', 'info');
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const tracks = stream.getAudioTracks();
+        addLog(`Microphone access GRANTED! Tracks: ${tracks.length}`, 'success');
+        addLog(`Track label: ${tracks[0]?.label || 'unknown'}`, 'info');
+        addLog(`Track enabled: ${tracks[0]?.enabled}`, 'info');
+        addLog(`Track readyState: ${tracks[0]?.readyState}`, 'info');
+
+        addResult('Microphone Access', `✅ Permission granted<br>Device: ${tracks[0]?.label || 'Default'}`, 'pass');
+
+        // Test audio levels
+        const audioCtx = new AudioContext();
+        const source = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        let maxLevel = 0;
+        let checkCount = 0;
+
+        addLog('Listening for audio levels for 3 seconds... SPEAK NOW!', 'warning');
+
+        const checkInterval = setInterval(() => {
+          analyser.getByteFrequencyData(dataArray);
+          const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+          if (avg > maxLevel) maxLevel = avg;
+          checkCount++;
+          if (checkCount % 10 === 0) addLog(`Audio level: ${avg.toFixed(1)} (max so far: ${maxLevel.toFixed(1)})`, 'info');
+        }, 100);
+
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          stream.getTracks().forEach(t => t.stop());
+          audioCtx.close();
+
+          if (maxLevel > 5) {
+            addResult('Audio Input Level', `✅ Audio detected! Max level: ${maxLevel.toFixed(1)}`, 'pass');
+            addLog(`Audio test PASSED. Max level: ${maxLevel.toFixed(1)}`, 'success');
+          } else {
+            addResult('Audio Input Level', `⚠️ No audio detected (max: ${maxLevel.toFixed(1)}). Is your mic muted or disconnected?`, 'warn');
+            addLog(`Audio test WARNING: Very low audio. Max level: ${maxLevel.toFixed(1)}. Check mic!`, 'warning');
+          }
+        }, 3000);
+
+      } catch (err) {
+        addResult('Microphone Access', `❌ Permission DENIED: ${err.message}`, 'fail');
+        addLog(`Microphone DENIED: ${err.message}`, 'error');
+        addLog('Fix: Click the 🔒 icon in the address bar → Allow microphone', 'warning');
+      }
+    }
+
+    async function testSTT() {
+      addLog('--- SPEECH-TO-TEXT TEST ---', 'info');
+
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        addResult('Speech-to-Text', '❌ SpeechRecognition not available in this browser', 'fail');
+        addLog('STT: Not available. Use Chrome or Edge.', 'error');
+        return;
+      }
+
+      const recognition = new SR();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      addLog('Starting SpeechRecognition... SPEAK NOW!', 'warning');
+
+      let gotResult = false;
+      let interimCount = 0;
+
+      recognition.onstart = () => {
+        addLog('SpeechRecognition.onstart fired ✅', 'success');
+        addResult('STT Engine', '✅ Started successfully - SPEAK NOW for 10 seconds', 'pass');
+      };
+
+      recognition.onaudiostart = () => {
+        addLog('SpeechRecognition.onaudiostart - Audio capture started ✅', 'success');
+      };
+
+      recognition.onsoundstart = () => {
+        addLog('SpeechRecognition.onsoundstart - Sound detected ✅', 'success');
+      };
+
+      recognition.onspeechstart = () => {
+        addLog('SpeechRecognition.onspeechstart - Speech detected ✅✅✅', 'success');
+      };
+
+      recognition.onresult = (event) => {
+        gotResult = true;
+        const result = event.results[event.results.length - 1];
+        const transcript = result[0].transcript;
+        const confidence = (result[0].confidence * 100).toFixed(1);
+
+        if (result.isFinal) {
+          addLog(`FINAL RESULT: "${transcript}" (confidence: ${confidence}%)`, 'success');
+          addResult('Speech Captured', `✅ "${transcript}" (${confidence}% confidence)`, 'pass');
+        } else {
+          interimCount++;
+          addLog(`Interim #${interimCount}: "${transcript}"`, 'info');
+        }
+      };
+
+      recognition.onerror = (e) => {
+        addLog(`SpeechRecognition.onerror: ${e.error} - ${e.message || 'no message'}`, 'error');
+
+        const errorMessages = {
+          'not-allowed': '❌ Microphone permission denied. Click 🔒 in address bar → Allow mic.',
+          'no-speech': '⚠️ No speech detected. Try speaking louder or closer to mic.',
+          'network': '❌ Network error. SpeechRecognition needs internet (sends audio to Google servers).',
+          'audio-capture': '❌ No microphone found. Check your audio input device.',
+          'aborted': '⚠️ Recognition aborted.',
+          'service-not-allowed': '❌ Speech service not allowed. Try Chrome or Edge.',
+          'language-not-supported': '❌ Language en-US not supported.',
+        };
+
+        const msg = errorMessages[e.error] || `❌ Unknown error: ${e.error}`;
+        addResult(`STT Error: ${e.error}`, msg, e.error === 'no-speech' ? 'warn' : 'fail');
+      };
+
+      recognition.onend = () => {
+        addLog(`SpeechRecognition.onend - Session ended. Got results: ${gotResult}`, gotResult ? 'success' : 'warning');
+        if (!gotResult) {
+          addResult('STT Result', '⚠️ Recognition ended without capturing any speech. Check errors above.', 'warn');
+        }
+      };
+
+      try {
+        recognition.start();
+        addLog('recognition.start() called successfully', 'success');
+      } catch (err) {
+        addLog(`recognition.start() FAILED: ${err.message}`, 'error');
+        addResult('STT Start', `❌ Failed to start: ${err.message}`, 'fail');
+      }
+
+      // Auto-stop after 10 seconds
+      setTimeout(() => {
+        try { recognition.stop(); } catch {}
+      }, 10000);
+    }
+
+    async function runAllTests() {
+      clearResults();
+      addLog('=== RUNNING ALL DIAGNOSTICS ===', 'info');
+      const { browser, isSecure, hasSR } = await testBrowserSupport();
+
+      if (!isSecure) {
+        addResult('⛔ BLOCKED', 'Speech Recognition will NOT work on non-HTTPS, non-localhost URLs. Run on localhost:3000 or deploy to HTTPS.', 'fail');
+        return;
+      }
+
+      if (!hasSR) {
+        addResult('⛔ BLOCKED', 'Your browser does not support SpeechRecognition. Use Google Chrome or Microsoft Edge.', 'fail');
+        return;
+      }
+
+      addLog('Browser checks passed. Testing microphone...', 'info');
+      await testMicrophone();
+
+      addLog('Waiting 4 seconds for mic test to finish...', 'info');
+      setTimeout(() => {
+        testSTT();
+      }, 4000);
+    }
+
+    // Auto-run on load
+    window.onload = () => {
+      addLog('Page loaded. Click "Run All Tests" to diagnose.', 'info');
+    };
+  </script>
+</body>
+</html>

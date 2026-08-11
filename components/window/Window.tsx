@@ -2,7 +2,7 @@
 
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AppId, WindowState } from '../../types';
+import { WindowState } from '../../types';
 import { useWindowStore } from '../../store/useWindowStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { WindowControls } from './WindowControls';
@@ -24,6 +24,43 @@ export const Window: React.FC<WindowProps> = ({ windowState, children }) => {
 
   const isActive = activeWindowId === id;
   const isLight = theme === 'light';
+
+  // Custom frameless liquid glass layout for Calendar & Settings Apps (fixed widget sizes, no full-screen stretching)
+  if (id === 'calculator' || id === 'settings') {
+    const targetWidth = id === 'settings' ? '700px' : '440px';
+
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          ref={windowRef}
+          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 15 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+          drag={true}
+          dragMomentum={false}
+          dragElastic={0}
+          onDragEnd={(_, info) => {
+            updatePosition(id, {
+              x: Math.max(10, position.x + info.offset.x),
+              y: Math.max(10, position.y + info.offset.y),
+            });
+          }}
+          onClick={() => focusWindow(id)}
+          style={{
+            zIndex,
+            left: position.x,
+            top: position.y,
+            width: targetWidth,
+            height: 'auto',
+          }}
+          className="fixed font-sans select-none overflow-hidden rounded-[36px] bg-transparent border-none shadow-none p-0 cursor-grab active:cursor-grabbing"
+        >
+          {children}
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
 
   return (
     <AnimatePresence mode="wait">
@@ -50,7 +87,7 @@ export const Window: React.FC<WindowProps> = ({ windowState, children }) => {
           width: isMaximized ? '100vw' : size.width,
           height: isMaximized ? 'calc(100vh - 56px)' : size.height,
         }}
-        className={`fixed flex flex-col font-sans select-none overflow-hidden transition-shadow duration-300 ${
+        className={`fixed flex flex-col font-sans select-none overflow-hidden ${
           isMaximized ? 'rounded-none' : 'rounded-2xl border'
         } ${
           isLight

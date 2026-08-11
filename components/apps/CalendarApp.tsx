@@ -1,459 +1,434 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
-  Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
   Plus,
+  Settings,
   X,
   Sparkles,
-  Flag,
+  FileEdit,
+  Bell,
+  Minus,
+  Square,
+  Copy,
 } from 'lucide-react';
-import { useSettingsStore } from '../../store/useSettingsStore';
+import { AppIcon } from '../common/AppIcon';
+import { useWindowStore } from '../../store/useWindowStore';
 
 interface CalendarEvent {
   id: string;
   title: string;
-  start: string; // YYYY-MM-DD
-  type: 'holiday' | 'custom';
-  globalName?: string;
-  description?: string;
-  bgColor?: string;
+  date: string; // YYYY-MM-DD
+  time?: string;
+  type: 'reminder' | 'event';
 }
 
-// Indian Gazetted Public Holidays
-const INDIAN_HOLIDAYS_BASE = [
-  { date: '-01-01', localName: "New Year's Day", name: "New Year's Day" },
-  { date: '-01-26', localName: 'Republic Day (Gantantra Diwas)', name: 'Republic Day' },
-  { date: '-03-08', localName: 'Maha Shivratri', name: 'Maha Shivratri' },
-  { date: '-03-25', localName: 'Holi (Festival of Colors)', name: 'Holi' },
-  { date: '-04-14', localName: 'Dr. B.R. Ambedkar Jayanti', name: 'Ambedkar Jayanti' },
-  { date: '-05-01', localName: 'Maharashtra Day / Labour Day', name: 'Maharashtra Day' },
-  { date: '-08-15', localName: 'Independence Day (Swatantrata Diwas)', name: 'Independence Day' },
-  { date: '-09-07', localName: 'Ganesh Chaturthi', name: 'Ganesh Chaturthi' },
-  { date: '-10-02', localName: 'Mahatma Gandhi Jayanti', name: 'Gandhi Jayanti' },
-  { date: '-10-24', localName: 'Dussehra (Vijaya Dashami)', name: 'Dussehra' },
-  { date: '-11-01', localName: 'Deepavali (Diwali)', name: 'Diwali' },
-  { date: '-11-15', localName: 'Guru Nanak Jayanti', name: 'Guru Nanak Jayanti' },
-  { date: '-12-25', localName: 'Christmas Day (Bada Din)', name: 'Christmas' },
-];
-
-// Custom Milestones
-const INITIAL_CUSTOM_EVENTS: CalendarEvent[] = [
+const INITIAL_EVENTS: CalendarEvent[] = [
   {
-    id: 'portfolio-launch',
+    id: 'evt-1',
     title: '🚀 Portfolio Launch',
-    start: '2026-08-20',
-    type: 'custom',
-    description: 'Official launch of Mayuresh Samel Windows OS Portfolio website.',
-    bgColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+    date: '2026-08-20',
+    time: '10:00 AM',
+    type: 'event',
   },
   {
-    id: 'lost-dune-release',
+    id: 'evt-2',
     title: '🎮 Lost Dune Game Release',
-    start: '2026-08-15',
-    type: 'custom',
-    description: 'Release of 3rd year diploma project Lost Dune web game by Mayuresh Samel.',
-    bgColor: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    date: '2026-08-15',
+    time: '02:00 PM',
+    type: 'event',
   },
   {
-    id: 'diploma-engineering',
-    title: '🎓 Diploma Engineering Milestone',
-    start: '2026-08-05',
-    type: 'custom',
-    description: 'Milestone achievement in Computer Engineering diploma studies.',
-    bgColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    id: 'rem-1',
+    title: 'Review Engineering Milestone',
+    date: '2026-08-21',
+    time: '05:00 PM',
+    type: 'reminder',
   },
-];
-
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
 ];
 
 export const CalendarApp: React.FC = () => {
-  const { theme } = useSettingsStore();
+  const { minimizeWindow, maximizeWindow, closeWindow, windows } = useWindowStore();
+  const isMaximized = windows['calculator']?.isMaximized || false;
 
-  const [isMounted, setIsMounted] = useState(false);
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 11)); // Default to Aug 2026
-
-  // In-memory cache for Indian holidays by year
-  const holidayCache = useRef<Record<number, CalendarEvent[]>>({});
-
-  // State
-  const [holidays, setHolidays] = useState<CalendarEvent[]>([]);
-  const [customEvents, setCustomEvents] = useState<CalendarEvent[]>(INITIAL_CUSTOM_EVENTS);
-
-  // Modals
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedDateForAdd, setSelectedDateForAdd] = useState('');
-  const [newEventTitle, setNewEventTitle] = useState('');
-  const [newEventDesc, setNewEventDesc] = useState('');
+  const [modalType, setModalType] = useState<'reminder' | 'event'>('event');
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventTime, setEventTime] = useState('12:00 PM');
 
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth();
+  // Month & Day names
+  const monthName = currentDate.toLocaleDateString('en-US', { month: 'long' });
+  const dayNumber = selectedDate.getDate();
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // Fetch Indian Public Holidays with year caching & dataset fallback
-  const fetchHolidaysForYear = useCallback(async (year: number) => {
-    if (holidayCache.current[year]) {
-      setHolidays(holidayCache.current[year]);
-      return;
+  // Helper for week dates around selected date
+  const getWeekDates = (date: Date) => {
+    const current = new Date(date);
+    const firstDayOfWeek = current.getDate() - current.getDay(); // Sunday
+    const week = [];
+    for (let i = 0; i < 7; i++) {
+      week.push(new Date(current.setDate(firstDayOfWeek + i)));
     }
-
-    let rawHolidays: any[] = [];
-
-    try {
-      const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/IN`);
-      if (res.ok && res.status !== 204) {
-        const text = await res.text();
-        if (text && text.trim().length > 0) {
-          rawHolidays = JSON.parse(text);
-        }
-      }
-    } catch (err) {
-      console.log('Using Indian Holidays dataset for year:', year);
-    }
-
-    if (!rawHolidays || rawHolidays.length === 0) {
-      rawHolidays = INDIAN_HOLIDAYS_BASE.map((h) => ({
-        date: `${year}${h.date}`,
-        localName: h.localName,
-        name: h.name,
-      }));
-    }
-
-    const formattedHolidays: CalendarEvent[] = rawHolidays.map((holiday: any) => ({
-      id: `holiday-${holiday.date}-${holiday.name}`,
-      title: `🇮🇳 ${holiday.localName || holiday.name}`,
-      start: holiday.date,
-      type: 'holiday',
-      globalName: holiday.name,
-      description: `Official Indian Public Holiday (${holiday.localName || holiday.name})`,
-      bgColor: 'bg-red-500/20 text-red-300 border-red-500/40',
-    }));
-
-    holidayCache.current[year] = formattedHolidays;
-    setHolidays(formattedHolidays);
-  }, []);
-
-  useEffect(() => {
-    fetchHolidaysForYear(currentYear);
-  }, [currentYear, fetchHolidaysForYear]);
-
-  const allEvents = [...holidays, ...customEvents];
-
-  const getEventsForDate = (dateStr: string) => {
-    return allEvents.filter((ev) => ev.start === dateStr);
+    return week;
   };
 
-  const prevMonth = () => setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
-  const nextMonth = () => setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
-  const goToToday = () => setCurrentDate(new Date());
+  const weekDates = getWeekDates(selectedDate);
 
-  const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const prevMonthDays = new Date(currentYear, currentMonth, 0).getDate();
-  const totalGridCells = Math.ceil((firstDayIndex + daysInMonth) / 7) * 7;
+  // Month grid calculations
+  const daysInMonth = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const startDayOfMonth = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth(), 1).getDay();
 
-  const handleCreateEvent = (e: React.FormEvent) => {
+  const totalDays = daysInMonth(currentDate);
+  const startOffset = startDayOfMonth(currentDate);
+
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const hasEventOnDate = (dateObj: Date) => {
+    const dateStr = dateObj.toISOString().split('T')[0];
+    return events.some((e) => e.date === dateStr);
+  };
+
+  const handleAddEvent = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEventTitle.trim() || !selectedDateForAdd) return;
+    if (!eventTitle.trim()) return;
 
-    const newEv: CalendarEvent = {
-      id: `user-${Date.now()}`,
-      title: `⭐ ${newEventTitle.trim()}`,
-      start: selectedDateForAdd,
-      type: 'custom',
-      description: newEventDesc.trim() || 'Custom event',
-      bgColor: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    const newEvt: CalendarEvent = {
+      id: `evt-${Date.now()}`,
+      title: eventTitle,
+      date: dateStr,
+      time: eventTime,
+      type: modalType,
     };
 
-    setCustomEvents((prev) => [...prev, newEv]);
+    setEvents((prev) => [...prev, newEvt]);
+    setEventTitle('');
     setIsAddModalOpen(false);
-    setNewEventTitle('');
-    setNewEventDesc('');
   };
-
-  const isToday = (dayNum: number) => {
-    const today = new Date();
-    return (
-      today.getDate() === dayNum &&
-      today.getMonth() === currentMonth &&
-      today.getFullYear() === currentYear
-    );
-  };
-
-  if (!isMounted) return null;
 
   return (
     <div
-      className={`h-full flex flex-col font-sans select-text overflow-hidden transition-colors ${
-        theme === 'light' ? 'bg-white text-slate-900' : 'bg-slate-950 text-slate-100'
+      className={`w-full text-white shadow-2xl relative overflow-hidden flex flex-col justify-between select-none font-sans transition-all ${
+        isMaximized ? 'h-full rounded-none p-8' : 'rounded-[36px] p-7'
       }`}
+      style={{
+        background: 'rgba(38, 52, 42, 0.48)',
+        backdropFilter: 'blur(50px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(50px) saturate(180%)',
+        border: '1px solid rgba(255, 255, 255, 0.25)',
+        boxShadow: '0 30px 60px rgba(0, 0, 0, 0.5), inset 0 1.5px 1px rgba(255, 255, 255, 0.3)',
+      }}
     >
-      {/* Clean Minimal Header */}
-      <div
-        className={`h-14 px-6 border-b flex items-center justify-between shrink-0 ${
-          theme === 'light' ? 'border-slate-200 bg-slate-50' : 'border-white/10 bg-slate-900/60'
-        }`}
-      >
-        {/* Left: App Title */}
-        <div className="flex items-center gap-2.5">
-          <CalendarIcon size={20} className="text-red-500" />
-          <h2 className="text-base font-bold tracking-tight">Calendar</h2>
+      {/* Top Header Row with App Icon, Title, Switcher & Window Controls */}
+      <div className="flex items-center justify-between gap-2 mb-6 cursor-move select-none">
+        {/* Top Left: App Icon & Title */}
+        <div className="flex items-center gap-2">
+          <AppIcon id="calculator" size={20} />
+          <span className="text-xs font-semibold text-white/90 tracking-wide">Calendar</span>
         </div>
 
-        {/* Center: Month Navigation */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={prevMonth}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-          >
-            <ChevronLeft size={18} />
-          </button>
-
-          <span className="text-sm font-bold text-white tracking-wide min-w-[140px] text-center">
-            {MONTHS[currentMonth]} {currentYear}
-          </span>
-
-          <button
-            onClick={nextMonth}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-          >
-            <ChevronRight size={18} />
-          </button>
-
-          <button
-            onClick={goToToday}
-            className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold transition-colors text-slate-200"
-          >
-            Today
-          </button>
-        </div>
-
-        {/* Right: Add Event Button */}
-        <button
-          onClick={() => {
-            setSelectedDateForAdd(new Date().toISOString().split('T')[0]);
-            setIsAddModalOpen(true);
+        {/* Center: Segmented Pill Switcher */}
+        <div
+          className="p-1 rounded-2xl flex items-center"
+          style={{
+            background: 'rgba(255, 255, 255, 0.10)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
           }}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-md shadow-blue-600/20 cursor-pointer"
         >
-          <Plus size={15} />
-          <span>Add Event</span>
-        </button>
-      </div>
-
-      {/* Clean Calendar Grid */}
-      <div className="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar flex flex-col">
-        {/* Day Names Row */}
-        <div className="grid grid-cols-7 mb-2 text-center text-xs font-semibold text-slate-400 border-b border-white/10 pb-2">
-          {DAYS.map((d) => (
-            <div key={d}>{d}</div>
-          ))}
+          <button
+            onClick={() => setViewMode('weekly')}
+            className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 ${
+              viewMode === 'weekly'
+                ? 'bg-white text-slate-900 shadow-md font-bold'
+                : 'text-white/80 hover:text-white'
+            }`}
+          >
+            Weekly
+          </button>
+          <button
+            onClick={() => setViewMode('monthly')}
+            className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 ${
+              viewMode === 'monthly'
+                ? 'bg-white text-slate-900 shadow-md font-bold'
+                : 'text-white/80 hover:text-white'
+            }`}
+          >
+            Monthly
+          </button>
         </div>
 
-        {/* Calendar Grid */}
-        <div className="grid grid-cols-7 flex-1 gap-2 auto-rows-fr">
-          {Array.from({ length: totalGridCells }).map((_, index) => {
-            const dayOffset = index - firstDayIndex + 1;
-            const isCurrentMonthDay = dayOffset > 0 && dayOffset <= daysInMonth;
+        {/* Top Right: Settings & Window Controls (Minimize, Maximize, Close) */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setViewMode((prev) => (prev === 'weekly' ? 'monthly' : 'weekly'))}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-white/90 transition-all active:scale-95 shadow-sm mr-1"
+            style={{
+              background: 'rgba(255, 255, 255, 0.12)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
+              backdropFilter: 'blur(12px)',
+            }}
+            title="Settings"
+          >
+            <Settings size={15} />
+          </button>
 
-            let dayNum = dayOffset;
-            let cellMonth = currentMonth;
-            let cellYear = currentYear;
-
-            if (dayOffset <= 0) {
-              dayNum = prevMonthDays + dayOffset;
-              cellMonth = currentMonth - 1;
-            } else if (dayOffset > daysInMonth) {
-              dayNum = dayOffset - daysInMonth;
-              cellMonth = currentMonth + 1;
-            }
-
-            const cellDate = new Date(cellYear, cellMonth, dayNum);
-            const dateStr = `${cellDate.getFullYear()}-${String(
-              cellDate.getMonth() + 1
-            ).padStart(2, '0')}-${String(cellDate.getDate()).padStart(2, '0')}`;
-
-            const dayEvents = getEventsForDate(dateStr);
-            const isTodayCell = isCurrentMonthDay && isToday(dayNum);
-
-            return (
-              <div
-                key={index}
-                onClick={() => {
-                  setSelectedDateForAdd(dateStr);
-                  setIsAddModalOpen(true);
-                }}
-                className={`min-h-[85px] p-2 rounded-2xl border flex flex-col transition-all cursor-pointer ${
-                  isCurrentMonthDay
-                    ? theme === 'light'
-                      ? 'bg-slate-50 border-slate-200 hover:border-blue-400'
-                      : 'bg-slate-900/50 border-white/10 hover:border-blue-500/50'
-                    : 'opacity-20 bg-transparent border-transparent'
-                } ${isTodayCell ? 'ring-2 ring-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/10' : ''}`}
-              >
-                {/* Date Header */}
-                <div className="flex items-center justify-between mb-1">
-                  <span
-                    className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center ${
-                      isTodayCell
-                        ? 'bg-blue-500 text-white font-extrabold'
-                        : isCurrentMonthDay
-                        ? 'text-slate-200'
-                        : 'text-slate-500'
-                    }`}
-                  >
-                    {dayNum}
-                  </span>
-                </div>
-
-                {/* Events list */}
-                <div className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
-                  {dayEvents.map((ev) => (
-                    <div
-                      key={ev.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedEvent(ev);
-                      }}
-                      className={`text-[11px] font-medium px-2 py-0.5 rounded-lg border truncate transition-transform hover:scale-[1.02] ${ev.bgColor}`}
-                    >
-                      {ev.title}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Selected Event Details Modal */}
-      {selectedEvent && (
-        <div className="fixed inset-0 z-[9990] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl border bg-slate-900 border-white/15 text-white">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                {selectedEvent.type === 'holiday' ? (
-                  <>
-                    <Flag size={16} className="text-red-400" /> Indian Public Holiday
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={16} className="text-blue-400" /> Portfolio Event
-                  </>
-                )}
-              </span>
+            {/* Window Controls (Minimize & Close only) */}
+            <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
               <button
-                onClick={() => setSelectedEvent(null)}
-                className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white"
+                onClick={() => minimizeWindow('calculator')}
+                className="w-8 h-8 rounded-lg hover:bg-white/15 flex items-center justify-center text-white/80 hover:text-white transition-colors"
+                title="Minimize"
               >
-                <X size={16} />
+                <Minus size={14} />
+              </button>
+              <button
+                onClick={() => closeWindow('calculator')}
+                className="w-8 h-8 rounded-lg hover:bg-red-500/80 flex items-center justify-center text-white/80 hover:text-white transition-colors"
+                title="Close"
+              >
+                <X size={15} />
               </button>
             </div>
+        </div>
+      </div>
 
-            <h3 className="text-lg font-bold mb-1">{selectedEvent.title}</h3>
-            <div className="text-xs font-mono text-blue-400 mb-4">Date: {selectedEvent.start}</div>
+      {/* Hero Date Header (Month + Big Date) */}
+      <div className="flex items-baseline justify-between mb-8 px-1">
+        <div className="flex items-center gap-2">
+          <h1 className="text-5xl font-light tracking-tight text-white drop-shadow-sm">
+            {monthName}
+          </h1>
+          {viewMode === 'monthly' && (
+            <div className="flex items-center gap-1 ml-2">
+              <button
+                onClick={handlePrevMonth}
+                className="p-1 rounded-lg hover:bg-white/15 text-white/70 hover:text-white"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={handleNextMonth}
+                className="p-1 rounded-lg hover:bg-white/15 text-white/70 hover:text-white"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+        </div>
+        <span className="text-5xl font-light text-white tracking-tight font-mono drop-shadow-sm">
+          {dayNumber}
+        </span>
+      </div>
 
-            {selectedEvent.description && (
-              <p className="text-xs text-slate-300 leading-relaxed p-3.5 rounded-xl bg-white/5 border border-white/10 mb-4">
-                {selectedEvent.description}
-              </p>
-            )}
+      {/* View Mode Content */}
+      {viewMode === 'weekly' ? (
+        /* WEEKLY VIEW (Matches exact design screenshot!) */
+        <div className="mb-8">
+          {/* Days Header */}
+          <div className="grid grid-cols-7 text-center text-xs font-medium text-white/50 mb-3">
+            <span>S</span>
+            <span>M</span>
+            <span>T</span>
+            <span>W</span>
+            <span>T</span>
+            <span>F</span>
+            <span>S</span>
+          </div>
 
-            <button
-              onClick={() => setSelectedEvent(null)}
-              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold cursor-pointer"
-            >
-              Close
-            </button>
+          {/* Dates Row */}
+          <div className="grid grid-cols-7 text-center items-center justify-items-center">
+            {weekDates.map((d) => {
+              const isSelected =
+                d.getDate() === selectedDate.getDate() &&
+                d.getMonth() === selectedDate.getMonth() &&
+                d.getFullYear() === selectedDate.getFullYear();
+
+              const isToday =
+                d.getDate() === new Date().getDate() &&
+                d.getMonth() === new Date().getMonth() &&
+                d.getFullYear() === new Date().getFullYear();
+
+              const hasEvent = hasEventOnDate(d);
+
+              return (
+                <div
+                  key={d.toISOString()}
+                  onClick={() => setSelectedDate(d)}
+                  className="flex flex-col items-center cursor-pointer group"
+                >
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-base font-semibold transition-all duration-300 ${
+                      isSelected || isToday
+                        ? 'bg-white text-slate-950 font-bold shadow-lg scale-105'
+                        : 'text-white/95 hover:bg-white/15'
+                    }`}
+                  >
+                    {d.getDate()}
+                  </div>
+                  {/* Event Dot Indicator */}
+                  <div className="h-2 flex items-center justify-center mt-1">
+                    {hasEvent && (
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          isSelected || isToday ? 'bg-emerald-500' : 'bg-white/80'
+                        }`}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        /* MONTHLY VIEW GRID */
+        <div className="mb-8">
+          <div className="grid grid-cols-7 text-center text-xs font-medium text-white/50 mb-2">
+            <span>S</span>
+            <span>M</span>
+            <span>T</span>
+            <span>W</span>
+            <span>T</span>
+            <span>F</span>
+            <span>S</span>
+          </div>
+
+          <div className="grid grid-cols-7 text-center gap-1 text-sm">
+            {Array.from({ length: startOffset }).map((_, i) => (
+              <div key={`empty-${i}`} className="h-9" />
+            ))}
+            {Array.from({ length: totalDays }).map((_, i) => {
+              const dayNum = i + 1;
+              const d = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNum);
+              const isSelected =
+                d.getDate() === selectedDate.getDate() &&
+                d.getMonth() === selectedDate.getMonth() &&
+                d.getFullYear() === selectedDate.getFullYear();
+
+              return (
+                <div
+                  key={dayNum}
+                  onClick={() => setSelectedDate(d)}
+                  className={`h-9 rounded-xl flex items-center justify-center font-medium cursor-pointer transition-all ${
+                    isSelected
+                      ? 'bg-white text-slate-950 font-bold shadow-md'
+                      : 'hover:bg-white/15 text-white/90'
+                  }`}
+                >
+                  {dayNum}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
+      {/* Bottom Action Footer */}
+      <div className="flex items-center justify-between pt-3 border-t border-white/15">
+        <button
+          onClick={() => {
+            setModalType('reminder');
+            setIsAddModalOpen(true);
+          }}
+          className="flex items-center gap-2 text-xs font-medium text-white/85 hover:text-white transition-colors py-2 px-1"
+        >
+          <FileEdit size={16} className="text-white/85" />
+          <span>Add Reminder</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setModalType('event');
+            setIsAddModalOpen(true);
+          }}
+          className="text-white text-xs font-semibold px-4 py-2.5 rounded-2xl flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+          style={{
+            background: 'rgba(255, 255, 255, 0.14)',
+            border: '1px solid rgba(255, 255, 255, 0.22)',
+            backdropFilter: 'blur(10px)',
+          }}
+        >
+          <Plus size={15} />
+          <span>New Event</span>
+        </button>
+      </div>
+
       {/* Add Event Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-[9990] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl border bg-slate-900 border-white/15 text-white">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
-                <Plus size={14} /> Add Event
-              </span>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white"
-              >
-                <X size={16} />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div
+            className="w-full max-w-sm rounded-3xl p-6 text-white shadow-2xl relative"
+            style={{
+              background: 'rgba(25, 35, 28, 0.92)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              backdropFilter: 'blur(30px)',
+            }}
+          >
+            <button
+              onClick={() => setIsAddModalOpen(false)}
+              className="absolute top-4 right-4 p-1 rounded-full hover:bg-white/10 text-white/70"
+            >
+              <X size={18} />
+            </button>
 
-            <form onSubmit={handleCreateEvent} className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-slate-400 block mb-1">Date</label>
-                <input
-                  type="date"
-                  required
-                  value={selectedDateForAdd}
-                  onChange={(e) => setSelectedDateForAdd(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/15 text-xs text-white focus:outline-none focus:border-blue-500"
-                />
-              </div>
+            <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+              {modalType === 'event' ? <Sparkles size={18} className="text-emerald-400" /> : <Bell size={18} className="text-amber-400" />}
+              Add {modalType === 'event' ? 'New Event' : 'Reminder'}
+            </h3>
+            <p className="text-xs text-slate-300 mb-4">
+              For {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
 
+            <form onSubmit={handleAddEvent} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-slate-400 block mb-1">Event Title *</label>
+                <label className="text-xs font-medium text-slate-300 block mb-1">Title</label>
                 <input
                   type="text"
-                  required
-                  value={newEventTitle}
-                  onChange={(e) => setNewEventTitle(e.target.value)}
-                  placeholder="Meeting / Hackathon..."
-                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/15 text-xs text-white focus:outline-none focus:border-blue-500"
+                  placeholder={modalType === 'event' ? 'e.g. Design Sync Meeting' : 'e.g. Pay Internet Bill'}
+                  value={eventTitle}
+                  onChange={(e) => setEventTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/20 text-white text-sm focus:outline-none focus:border-white/50"
+                  autoFocus
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-400 block mb-1">Description</label>
-                <textarea
-                  rows={3}
-                  value={newEventDesc}
-                  onChange={(e) => setNewEventDesc(e.target.value)}
-                  placeholder="Event details..."
-                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/15 text-xs text-white focus:outline-none focus:border-blue-500 resize-none"
+                <label className="text-xs font-medium text-slate-300 block mb-1">Time</label>
+                <input
+                  type="text"
+                  value={eventTime}
+                  onChange={(e) => setEventTime(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/20 text-white text-sm focus:outline-none focus:border-white/50 font-mono"
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="w-1/2 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs text-slate-300 hover:bg-white/10"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="w-1/2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white shadow-md shadow-blue-600/30 cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-white text-slate-950 font-bold text-xs hover:bg-white/90 shadow-md"
                 >
-                  Create Event
+                  Save {modalType === 'event' ? 'Event' : 'Reminder'}
                 </button>
               </div>
             </form>

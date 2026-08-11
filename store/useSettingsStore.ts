@@ -21,7 +21,7 @@ interface SettingsState {
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-  wallpaperId: 'wall-windows11',
+  wallpaperId: 'wall-windowsxp',
   wallpaperValue: WALLPAPERS[0].value,
   theme: 'dark',
   accentColor: '#0078d4',
@@ -72,7 +72,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   toggleTranslucency: () => set((state) => ({ translucencyEnabled: !state.translucencyEnabled })),
   resetSettings: () =>
     set({
-      wallpaperId: 'wall-bliss',
+      wallpaperId: 'wall-windowsxp',
       wallpaperValue: WALLPAPERS[0].value,
       theme: 'dark',
       accentColor: '#0078d4',
