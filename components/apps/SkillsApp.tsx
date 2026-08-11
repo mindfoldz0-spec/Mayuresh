@@ -144,6 +144,17 @@ export const SkillsApp: React.FC = () => {
     const cleanText = text.replace(/[*#•🚀🎮🎓✉️💻⚡]/g, '').trim();
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    // Pick best natural English voice
+    const voices = window.speechSynthesis.getVoices();
+    const naturalVoice = voices.find(
+      (v) => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('David'))
+    ) || voices.find((v) => v.lang.startsWith('en'));
+
+    if (naturalVoice) {
+      utterance.voice = naturalVoice;
+    }
 
     utterance.onstart = () => {
       setIsSpeaking(true);
