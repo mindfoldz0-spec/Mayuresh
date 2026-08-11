@@ -299,8 +299,13 @@ export const SkillsApp: React.FC = () => {
       isRecordingRef.current = true;
       setIsListening(true);
 
-      // ===== VAD REAL-TIME MONITORING LOOP =====
+      // ===== ADAPTIVE VAD REAL-TIME MONITORING LOOP =====
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      let sampleCount = 0;
+      let noiseSum = 0;
+      let calculatedNoiseFloor = 15; // default fallback
+      let speechStartTime = 0;
+
       vadIntervalRef.current = setInterval(() => {
         if (isSpeakingRef.current || !isRecordingRef.current) return;
 
@@ -308,26 +313,45 @@ export const SkillsApp: React.FC = () => {
         const sum = dataArray.reduce((acc, val) => acc + val, 0);
         const volume = sum / dataArray.length;
 
-        // Speech Detection Threshold
-        if (volume > 10) {
+        // 1. Calibrate background noise floor during first ~300ms
+        if (sampleCount < 4) {
+          sampleCount++;
+          noiseSum += volume;
+          calculatedNoiseFloor = Math.max(noiseSum / sampleCount, 5);
+          return;
+        }
+
+        const speechThreshold = Math.max(calculatedNoiseFloor + 7, 12);
+        const silenceThreshold = Math.max(calculatedNoiseFloor + 3, 8);
+
+        // 2. Speech Detection
+        if (volume > speechThreshold) {
           if (!hasSpeechRef.current) {
             hasSpeechRef.current = true;
+            speechStartTime = Date.now();
             setVoiceStatus('🎙️ Hearing speech...');
           }
           if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = null;
           }
+
+          // Safety Guardrail: Max 5 seconds continuous speech -> auto stop & process
+          if (speechStartTime > 0 && Date.now() - speechStartTime > 5000) {
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+              mediaRecorderRef.current.stop();
+            }
+          }
         } else if (hasSpeechRef.current) {
-          // Silence Detection: User stopped speaking
+          // 3. Silence Detection: Volume dropped back down near background noise floor
           setVoiceStatus('⏸️ Paused speaking...');
           if (!silenceTimerRef.current) {
             silenceTimerRef.current = setTimeout(() => {
-              // 1.2s of silence detected -> Automatically finish & transcribe!
+              // 1.0s of silence after speech -> Automatically finish & transcribe!
               if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
                 mediaRecorderRef.current.stop();
               }
-            }, 1200);
+            }, 1000);
           }
         }
       }, 80);
