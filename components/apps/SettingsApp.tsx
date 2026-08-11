@@ -59,7 +59,9 @@ export const SettingsApp: React.FC = () => {
           {WALLPAPERS.map((wall) => {
             const isSelected = wallpaperId === wall.id;
             const match = wall.thumbnail.match(/url\(['"]?([^'"]+)['"]?\)/);
-            const thumbUrl = match ? match[1] : null;
+            const rawThumbUrl = match ? match[1] : null;
+            const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+            const thumbUrl = rawThumbUrl ? `${basePath}${rawThumbUrl}` : null;
 
             return (
               <button
