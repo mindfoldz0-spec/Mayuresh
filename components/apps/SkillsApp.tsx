@@ -37,6 +37,8 @@ export const SkillsApp: React.FC = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState('Tap microphone to speak');
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [voiceAiReply, setVoiceAiReply] = useState('');
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -100,6 +102,7 @@ export const SkillsApp: React.FC = () => {
     }
 
     setVoiceStatus('Generating Fish Audio voice...');
+    setVoiceAiReply(text.replace(/[*#•🚀🎮🎓✉️💻⚡]/g, '').trim());
     const audioUrl = await fetchFishAudioTts(text);
 
     if (audioUrl) {
@@ -252,7 +255,7 @@ export const SkillsApp: React.FC = () => {
 
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
-      recognition.interimResults = false;
+      recognition.interimResults = true;
       recognition.lang = 'en-US';
 
       recognition.onstart = () => {
@@ -262,14 +265,24 @@ export const SkillsApp: React.FC = () => {
 
       recognition.onresult = (event: any) => {
         const lastResultIndex = event.results.length - 1;
-        const transcript = event.results[lastResultIndex][0].transcript;
+        const result = event.results[lastResultIndex];
+        const transcript = result[0].transcript;
+
         if (transcript && transcript.trim()) {
-          // Pause listening while processing — do NOT set shouldListenRef to false
-          // so the mic auto-restarts after AI finishes speaking
-          setIsListening(false);
-          try { recognition.stop(); } catch {}
-          setVoiceStatus('Processing Groq AI...');
-          handleSendMessage(transcript);
+          // Show live transcript in UI immediately
+          setVoiceTranscript(transcript.trim());
+
+          if (result.isFinal) {
+            // Final result — stop listening and process
+            setIsListening(false);
+            try { recognition.stop(); } catch {}
+            setVoiceStatus('Processing AI...');
+            setVoiceAiReply('');
+            handleSendMessage(transcript.trim());
+          } else {
+            // Interim result — show live text while user is still speaking
+            setVoiceStatus('Hearing you...');
+          }
         }
       };
 
@@ -540,8 +553,8 @@ export const SkillsApp: React.FC = () => {
             </button>
           </div>
 
-          {/* PERFECT FLUID CIRCLE */}
-          <div className="relative flex flex-col items-center justify-center my-auto space-y-6">
+          {/* PERFECT FLUID CIRCLE + LIVE TRANSCRIPT */}
+          <div className="relative flex flex-col items-center justify-center my-auto space-y-4">
             <div className="relative flex items-center justify-center">
               <motion.div
                 animate={{
@@ -549,12 +562,12 @@ export const SkillsApp: React.FC = () => {
                   opacity: isListening || isSpeaking ? [0.6, 0.9, 0.6] : [0.2, 0.4, 0.2],
                 }}
                 transition={{ repeat: Infinity, duration: isListening || isSpeaking ? 1.5 : 4, ease: 'easeInOut' }}
-                className="absolute w-72 h-72 rounded-full bg-gradient-to-r from-amber-400/40 via-orange-500/30 to-red-400/40 blur-3xl pointer-events-none"
+                className="absolute w-52 h-52 rounded-full bg-gradient-to-r from-amber-400/40 via-orange-500/30 to-red-400/40 blur-3xl pointer-events-none"
               />
 
               <div
                 onClick={toggleVoiceRecognition}
-                className="w-60 h-60 md:w-64 md:h-64 rounded-full overflow-hidden shadow-[0_20px_50px_rgba(255,106,0,0.35)] relative flex items-center justify-center cursor-pointer border-4 border-white/80 shrink-0"
+                className="w-44 h-44 md:w-48 md:h-48 rounded-full overflow-hidden shadow-[0_20px_50px_rgba(255,106,0,0.35)] relative flex items-center justify-center cursor-pointer border-4 border-white/80 shrink-0"
                 style={{
                   background: 'linear-gradient(135deg, #ff7e5f 0%, #feb47b 45%, #ff6a00 100%)',
                   borderRadius: '50%',
@@ -587,6 +600,48 @@ export const SkillsApp: React.FC = () => {
                   }}
                 />
               </div>
+            </div>
+
+            {/* Live Transcript & AI Reply Display */}
+            <div className="w-full max-w-sm space-y-2 text-center min-h-[60px]">
+              {/* User's speech transcript */}
+              {voiceTranscript && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white/90 backdrop-blur-sm border border-slate-200 rounded-2xl px-4 py-2.5 shadow-sm"
+                >
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">You said</p>
+                  <p className="text-sm text-slate-800 font-medium leading-relaxed">{voiceTranscript}</p>
+                </motion.div>
+              )}
+
+              {/* AI response text */}
+              {voiceAiReply && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/60 rounded-2xl px-4 py-2.5 shadow-sm max-h-24 overflow-y-auto custom-scrollbar"
+                >
+                  <p className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider mb-1">
+                    {isSpeaking ? '🔊 Speaking' : isLoadingAi ? '⏳ Thinking...' : '✦ AI Reply'}
+                  </p>
+                  <p className="text-xs text-slate-700 leading-relaxed">{voiceAiReply}</p>
+                </motion.div>
+              )}
+
+              {/* Loading indicator */}
+              {isLoadingAi && !voiceAiReply && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center justify-center gap-2 py-2"
+                >
+                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </motion.div>
+              )}
             </div>
 
             {/* Instant Voice Test Buttons */}
