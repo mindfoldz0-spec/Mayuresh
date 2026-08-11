@@ -41,27 +41,28 @@ export const SkillsApp: React.FC = () => {
   const [voiceAiReply, setVoiceAiReply] = useState('');
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-  const shouldListenRef = useRef<boolean>(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const isSpeakingRef = useRef<boolean>(false);
+  const isRecordingRef = useRef<boolean>(false);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoadingAi]);
 
-  // Clean up audio on unmount
+  // Clean up on unmount
   useEffect(() => {
     return () => {
-      shouldListenRef.current = false;
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
       }
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
       }
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch {}
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        try { mediaRecorderRef.current.stop(); } catch {}
       }
     };
   }, []);
@@ -93,15 +94,36 @@ export const SkillsApp: React.FC = () => {
     return `Thanks for asking! Mayuresh is a full-stack engineer proficient in React, Next.js, TypeScript, Node.js, and cloud deployments. Feel free to ask about his skills, projects, or email him at ${MAYURESH_PROFILE.email}!`;
   };
 
+  // Transcribe audio blob via Groq Whisper server proxy
+  const transcribeAudio = async (audioBlob: Blob): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const res = await fetch(`${basePath}/api/stt`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        console.error('STT API error:', res.status);
+        return null;
+      }
+
+      const data = await res.json();
+      return data.text || null;
+    } catch (err) {
+      console.error('Transcription error:', err);
+      return null;
+    }
+  };
+
   const speakVoiceResponse = async (text: string) => {
     // Temporarily pause mic while AI speaks
-    shouldListenRef.current = false;
     isSpeakingRef.current = true;
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch {}
-    }
 
-    setVoiceStatus('Generating Fish Audio voice...');
+    setVoiceStatus('Generating voice...');
     setVoiceAiReply(text.replace(/[*#•🚀🎮🎓✉️💻⚡]/g, '').trim());
     const audioUrl = await fetchFishAudioTts(text);
 
@@ -115,70 +137,30 @@ export const SkillsApp: React.FC = () => {
 
       audio.onplay = () => {
         setIsSpeaking(true);
-        setVoiceStatus('Mayuresh AI Speaking...');
+        setVoiceStatus('🔊 Speaking...');
       };
 
       audio.onended = () => {
         setIsSpeaking(false);
         isSpeakingRef.current = false;
-        setVoiceStatus('Listening... Speak now');
-        // Auto-restart mic after AI finishes speaking
-        startVoiceRecognition();
+        setVoiceStatus('Tap microphone to speak');
       };
 
       audio.onerror = () => {
-        fallbackBrowserTts(text);
+        setIsSpeaking(false);
+        isSpeakingRef.current = false;
+        setVoiceStatus('Audio playback error');
       };
 
-      audio.play().catch(() => fallbackBrowserTts(text));
+      audio.play().catch(() => {
+        setIsSpeaking(false);
+        isSpeakingRef.current = false;
+        setVoiceStatus('Audio playback failed');
+      });
     } else {
-      fallbackBrowserTts(text);
-    }
-  };
-
-  const fallbackBrowserTts = (text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      setIsSpeaking(false);
       isSpeakingRef.current = false;
-      setVoiceStatus('Tap microphone to speak');
-      return;
+      setVoiceStatus('Voice generation failed');
     }
-
-    window.speechSynthesis.cancel();
-    const cleanText = text.replace(/[*#•🚀🎮🎓✉️💻⚡]/g, '').trim();
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-
-    const voices = window.speechSynthesis.getVoices();
-    const naturalVoice = voices.find(
-      (v) => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('David'))
-    ) || voices.find((v) => v.lang.startsWith('en'));
-
-    if (naturalVoice) {
-      utterance.voice = naturalVoice;
-    }
-
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      setVoiceStatus('Mayuresh AI Speaking...');
-    };
-
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      isSpeakingRef.current = false;
-      setVoiceStatus('Listening... Speak now');
-      // Auto-restart mic after fallback TTS finishes speaking
-      startVoiceRecognition();
-    };
-
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-      isSpeakingRef.current = false;
-      setVoiceStatus('Tap microphone to speak');
-    };
-
-    window.speechSynthesis.speak(utterance);
   };
 
   const handleSendMessage = async (textToSend?: string) => {
@@ -220,129 +202,115 @@ export const SkillsApp: React.FC = () => {
     }
   };
 
-  // Continuous speech recognition engine with auto-restart on silent pause
-  const startVoiceRecognition = async () => {
+  // ===== NEW: MediaRecorder + Groq Whisper STT Engine =====
+  const startRecording = async () => {
     if (typeof window === 'undefined') return;
 
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      setVoiceStatus('Speech Recognition unavailable');
-      return;
-    }
-
-    shouldListenRef.current = true;
-
     try {
-      // 1. Request microphone access and immediately release track so webkitSpeechRecognition can access microphone device
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          stream.getTracks().forEach((track) => track.stop());
-        } catch {
-          // Ignore if already allowed
-        }
-      }
-
+      // Stop any playing audio first
       if (currentAudioRef.current) currentAudioRef.current.pause();
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
       setIsSpeaking(false);
       isSpeakingRef.current = false;
 
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch {}
-      }
+      setVoiceStatus('Requesting microphone...');
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
 
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+      // Choose best available audio format
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : 'audio/mp4';
 
-      recognition.onstart = () => {
-        setIsListening(true);
-        setVoiceStatus('Listening... Speak now');
+      const recorder = new MediaRecorder(stream, { mimeType });
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
       };
 
-      recognition.onresult = (event: any) => {
-        const lastResultIndex = event.results.length - 1;
-        const result = event.results[lastResultIndex];
-        const transcript = result[0].transcript;
+      recorder.onstop = async () => {
+        // Release mic
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+          mediaStreamRef.current = null;
+        }
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        audioChunksRef.current = [];
+
+        if (audioBlob.size < 1000) {
+          setVoiceStatus('No speech detected. Try again.');
+          setIsListening(false);
+          isRecordingRef.current = false;
+          return;
+        }
+
+        setIsListening(false);
+        isRecordingRef.current = false;
+        setVoiceStatus('Transcribing with Groq Whisper...');
+
+        const transcript = await transcribeAudio(audioBlob);
 
         if (transcript && transcript.trim()) {
-          // Show live transcript in UI immediately
           setVoiceTranscript(transcript.trim());
-
-          if (result.isFinal) {
-            // Final result — stop listening and process
-            setIsListening(false);
-            try { recognition.stop(); } catch {}
-            setVoiceStatus('Processing AI...');
-            setVoiceAiReply('');
-            handleSendMessage(transcript.trim());
-          } else {
-            // Interim result — show live text while user is still speaking
-            setVoiceStatus('Hearing you...');
-          }
-        }
-      };
-
-      recognition.onerror = (e: any) => {
-        console.warn('Speech recognition event:', e.error);
-        if (e.error === 'no-speech' || e.error === 'network') {
-          if (shouldListenRef.current && !isSpeakingRef.current) {
-            try { recognition.start(); } catch {}
-          }
+          setVoiceStatus('Processing AI...');
+          setVoiceAiReply('');
+          handleSendMessage(transcript.trim());
         } else {
-          setIsListening(false);
-          setVoiceStatus('Tap microphone to speak');
+          setVoiceStatus('Could not understand. Tap mic to try again.');
+          setVoiceTranscript('');
         }
       };
 
-      recognition.onend = () => {
-        if (shouldListenRef.current && !isSpeakingRef.current) {
-          try {
-            recognition.start();
-            setIsListening(true);
-          } catch {
-            setIsListening(false);
-          }
-        } else {
-          setIsListening(false);
+      recorder.onerror = () => {
+        setIsListening(false);
+        isRecordingRef.current = false;
+        setVoiceStatus('Recording error. Tap mic to try again.');
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+          mediaStreamRef.current = null;
         }
       };
 
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (err) {
+      mediaRecorderRef.current = recorder;
+      recorder.start(100); // Collect data every 100ms
+      isRecordingRef.current = true;
+      setIsListening(true);
+      setVoiceStatus('🎤 Listening... Tap mic when done');
+    } catch (err: any) {
       console.error('Microphone error:', err);
       setIsListening(false);
-      shouldListenRef.current = false;
-      setVoiceStatus('Tap microphone to speak');
+      isRecordingRef.current = false;
+      setVoiceStatus(
+        err?.name === 'NotAllowedError'
+          ? '❌ Mic permission denied. Click 🔒 in address bar.'
+          : `❌ Mic error: ${err?.message || 'Unknown'}`
+      );
     }
   };
 
-  const stopVoiceRecognition = () => {
-    shouldListenRef.current = false;
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch {}
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      setVoiceStatus('Processing...');
     }
     setIsListening(false);
-    setVoiceStatus('Tap microphone to speak');
   };
 
   const toggleVoiceRecognition = () => {
-    if (isListening) {
-      stopVoiceRecognition();
+    if (isRecordingRef.current) {
+      stopRecording();
     } else {
-      startVoiceRecognition();
+      startRecording();
     }
   };
 
   const switchToVoiceTab = () => {
     setActiveTab('voice');
-    setTimeout(() => {
-      startVoiceRecognition();
-    }, 150);
   };
 
   return (
@@ -361,7 +329,7 @@ export const SkillsApp: React.FC = () => {
         <div className="bg-slate-100 p-1 rounded-full flex items-center border border-slate-200/60 shadow-inner">
           <button
             onClick={() => {
-              stopVoiceRecognition();
+              stopRecording();
               if (currentAudioRef.current) currentAudioRef.current.pause();
               if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
               setIsSpeaking(false);
@@ -706,7 +674,7 @@ export const SkillsApp: React.FC = () => {
 
               <button
                 onClick={() => {
-                  stopVoiceRecognition();
+                  stopRecording();
                   if (currentAudioRef.current) currentAudioRef.current.pause();
                   if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
                   setIsSpeaking(false);
