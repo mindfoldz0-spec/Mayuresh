@@ -100,12 +100,13 @@ export async function fetchFishAudioTts(textToSpeak: string): Promise<string | n
     const cleanText = textToSpeak.replace(/[*#•🚀🎮🎓✉️💻⚡]/g, '').trim();
     if (!cleanText) return null;
 
-    // Call Fish Audio TTS without specifying model to receive binary MP3 audio stream directly
+    // Call Fish Audio TTS with model header 's2.1-pro-free'
     const response = await fetch('https://api.fish.audio/v1/tts', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
+        'model': 's2.1-pro-free',
       },
       body: JSON.stringify({
         text: cleanText,
