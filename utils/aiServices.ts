@@ -54,15 +54,24 @@ ${PROJECTS.map((p) => `- ${p.title} (${p.category}): ${p.shortDescription}. Tech
 INSTRUCTIONS:
 1. Always be professional, concise, enthusiastic, and helpful.
 2. Answer recruiter questions accurately about Mayuresh's skills, experience, projects, and background.
-3. Keep responses concise (2-4 sentences for voice, structured bullet points for text chat).
-4. If asked about hiring or contacting, provide Mayuresh's email (${MAYURESH_PROFILE.email}) and GitHub/LinkedIn links.`;
+3. For text chat: Provide clear structured bullet points.
+4. For voice mode: Keep responses under 20 words (1-2 short sentences max) for ultra-fast conversational latency.
+5. If asked about hiring or contacting, provide Mayuresh's email (${MAYURESH_PROFILE.email}) and GitHub/LinkedIn links.`;
 
-export async function fetchGroqChatCompletion(userQuery: string, history: { role: 'user' | 'assistant'; content: string }[] = []) {
+export async function fetchGroqChatCompletion(
+  userQuery: string,
+  history: { role: 'user' | 'assistant'; content: string }[] = [],
+  isVoice: boolean = false
+) {
   try {
     const apiKey = getGroqKey();
+    const systemInstruction = isVoice
+      ? SYSTEM_PROMPT + '\n\nCRITICAL VOICE INSTRUCTION: Respond in 1 short sentence (under 15 words) so speech generation is instantaneous!'
+      : SYSTEM_PROMPT;
+
     const messages = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      ...history.slice(-6),
+      { role: 'system', content: systemInstruction },
+      ...history.slice(-4),
       { role: 'user', content: userQuery },
     ];
 
@@ -75,8 +84,8 @@ export async function fetchGroqChatCompletion(userQuery: string, history: { role
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         messages: messages,
-        temperature: 0.7,
-        max_tokens: 450,
+        temperature: 0.6,
+        max_tokens: isVoice ? 80 : 350,
       }),
     });
 

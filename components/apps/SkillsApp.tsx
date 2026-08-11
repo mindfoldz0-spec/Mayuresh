@@ -190,7 +190,7 @@ export const SkillsApp: React.FC = () => {
       content: m.text,
     }));
 
-    const groqResponse = await fetchGroqChatCompletion(text, chatHistory);
+    const groqResponse = await fetchGroqChatCompletion(text, chatHistory, activeTab === 'voice');
     const finalResponse = groqResponse || getLocalFallbackResponse(text);
 
     setIsLoadingAi(false);
