@@ -118,7 +118,9 @@ export const SkillsApp: React.FC = () => {
       audio.onended = () => {
         setIsSpeaking(false);
         isSpeakingRef.current = false;
-        setVoiceStatus('Tap microphone to speak');
+        setVoiceStatus('Listening... Speak now');
+        // Auto-restart mic after AI finishes speaking
+        startVoiceRecognition();
       };
 
       audio.onerror = () => {
@@ -162,7 +164,9 @@ export const SkillsApp: React.FC = () => {
     utterance.onend = () => {
       setIsSpeaking(false);
       isSpeakingRef.current = false;
-      setVoiceStatus('Tap microphone to speak');
+      setVoiceStatus('Listening... Speak now');
+      // Auto-restart mic after fallback TTS finishes speaking
+      startVoiceRecognition();
     };
 
     utterance.onerror = () => {
@@ -260,8 +264,10 @@ export const SkillsApp: React.FC = () => {
         const lastResultIndex = event.results.length - 1;
         const transcript = event.results[lastResultIndex][0].transcript;
         if (transcript && transcript.trim()) {
+          // Pause listening while processing — do NOT set shouldListenRef to false
+          // so the mic auto-restarts after AI finishes speaking
           setIsListening(false);
-          shouldListenRef.current = false;
+          try { recognition.stop(); } catch {}
           setVoiceStatus('Processing Groq AI...');
           handleSendMessage(transcript);
         }
